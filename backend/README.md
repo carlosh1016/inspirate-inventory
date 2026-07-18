@@ -14,13 +14,14 @@ API en Go para el sistema de inventario y ventas de Inspírate Inventory.
 
 - Go 1.22+
 - Docker (para Postgres local)
+- goose, golangci-lint, sqlc (ver `make install-tools` abajo)
 
 ## Desarrollo local
 
 ```bash
 cp .env.example .env
-make db-up     # levanta Postgres local
-make run       # levanta la API en :8080
+make install-tools  # instala goose, golangci-lint y sqlc (una sola vez)
+make dev             # db-up + levanta la API en :8080
 ```
 
 Verificar:
@@ -34,6 +35,7 @@ curl http://localhost:8080/api/v1/health
 | Comando | Descripción |
 |---|---|
 | `make run` | Corre la API con `go run` |
+| `make dev` | `db-up` + `go run ./cmd/api` en un solo comando |
 | `make build` | Compila el binario a `bin/api` |
 | `make test` | Corre los tests |
 | `make test-coverage` | Corre los tests con reporte de cobertura |
@@ -45,6 +47,7 @@ curl http://localhost:8080/api/v1/health
 | `make migrate-create name=nombre` | Crea una nueva migración SQL |
 | `make db-up` / `make db-down` | Levanta / detiene Postgres local |
 | `make db-reset` | Reinicia Postgres local (borra el volumen) |
+| `make install-tools` | Instala goose, golangci-lint y sqlc como binarios CLI |
 
 ## Estructura
 

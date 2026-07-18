@@ -10,8 +10,9 @@ Inspírate Inventory es un sistema web para administrar una perfumería familiar
 - **Query builder**: [sqlc](https://sqlc.dev/) (NO ORM).
 - **Migraciones**: [goose](https://github.com/pressly/goose), formato SQL puro. Se usa como binario CLI (`~/go/bin/goose` vía `go install`), no como dependencia del módulo — no se importa desde código Go.
 - **Base de datos**: PostgreSQL 15+ (Supabase en producción, Docker local en desarrollo).
-- **Frontend**: Next.js (App Router) + TypeScript.
-- **Estilos**: Tailwind CSS + shadcn/ui (instalar shadcn/ui solo cuando se necesite el primer componente).
+- **Frontend**: Next.js 16 (App Router) + React 19 + TypeScript. Config de Next en `next.config.ts` (no `.mjs`).
+- **Estilos**: Tailwind CSS v4 + shadcn/ui. Tailwind v4 se configura por CSS (`@theme` en `src/app/globals.css`), no con `tailwind.config.ts`. Al instalar shadcn/ui, usar la versión compatible con Tailwind v4.
+- **Linter frontend**: ESLint con flat config (`eslint.config.mjs`), no `.eslintrc.json`.
 - **Estado del servidor**: TanStack Query.
 - **Estado global**: Zustand.
 - **Formularios**: React Hook Form + Zod.
@@ -63,6 +64,18 @@ docs/
 - **Cada endpoint debe validar autorización explícitamente** dentro del handler o caso de uso — no confiar solo en middleware genérico.
 - **Cada movimiento de inventario debe ejecutarse dentro de una transacción** junto con la actualización de `stock_actual`, para evitar inconsistencias.
 
+## Herramientas externas requeridas
+
+Además de Go y Node, el backend depende de binarios CLI que no son dependencias del módulo (no aparecen en `go.mod`):
+
+```bash
+go install github.com/pressly/goose/v3/cmd/goose@latest
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+```
+
+`make install-tools` (en `backend/`) corre los tres comandos anteriores.
+
 ## Comandos comunes
 
 ### Backend (`cd backend`)
@@ -70,6 +83,7 @@ docs/
 | Comando | Descripción |
 |---|---|
 | `make run` | Levanta la API con `go run` |
+| `make dev` | `db-up` + levanta la API en un solo comando |
 | `make build` | Compila el binario |
 | `make test` | Corre los tests |
 | `make test-coverage` | Tests con cobertura |
@@ -78,6 +92,7 @@ docs/
 | `make migrate-up` / `make migrate-down` / `make migrate-status` | Migraciones (goose) |
 | `make migrate-create name=nombre` | Crea una migración nueva |
 | `make db-up` / `make db-down` / `make db-reset` | Postgres local (Docker) |
+| `make install-tools` | Instala goose, golangci-lint y sqlc como binarios CLI |
 
 ### Frontend (`cd frontend`)
 

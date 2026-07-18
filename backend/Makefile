@@ -1,12 +1,15 @@
-.PHONY: run build test test-coverage lint sqlc-generate \
+.PHONY: run dev build test test-coverage lint sqlc-generate \
 	migrate-up migrate-down migrate-status migrate-create \
-	db-up db-down db-reset
+	db-up db-down db-reset install-tools
 
 GOOSE_DRIVER := postgres
 GOOSE_DBSTRING := $(DATABASE_URL)
 MIGRATIONS_DIR := db/migrations
 
 run:
+	go run ./cmd/api
+
+dev: db-up
 	go run ./cmd/api
 
 build:
@@ -46,3 +49,8 @@ db-down:
 db-reset:
 	docker compose down -v
 	docker compose up -d postgres
+
+install-tools:
+	go install github.com/pressly/goose/v3/cmd/goose@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
