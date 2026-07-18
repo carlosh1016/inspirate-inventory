@@ -1,0 +1,31 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gosimple
+    - ineffassign
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - unconvert
+    - unparam
+    - gocyclo
+    - gocritic
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  goimports:
+    local-prefixes: github.com/carlosh1016/inspirate-inventory/backend
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo

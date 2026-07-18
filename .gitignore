@@ -1,0 +1,28 @@
+# --- Go (backend) ---
+backend/bin/
+backend/api
+backend/*.exe
+backend/coverage.out
+backend/coverage.html
+
+# --- Node / Next.js (frontend) ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+frontend/npm-debug.log*
+frontend/.turbo/
+
+# --- Env files (nunca .env.example) ---
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# --- Editores / SO ---
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/launch.json
