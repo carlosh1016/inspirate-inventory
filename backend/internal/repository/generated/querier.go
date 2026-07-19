@@ -11,25 +11,83 @@ import (
 type Querier interface {
 	ActivateUsuario(ctx context.Context, id int64) error
 	CountActiveAdmins(ctx context.Context) (int64, error)
+	// Mirrors ListFraganciasPaginated's GROUP BY/HAVING (stock_bajo needs it),
+	// otherwise meta.total would drift from the actually-returned items.
+	CountFragancias(ctx context.Context, arg CountFraganciasParams) (int64, error)
+	// No HAVING/aggregate here, so a plain COUNT can't drift from the list.
+	CountMetodosPago(ctx context.Context, arg CountMetodosPagoParams) (int64, error)
+	// No HAVING here: unlike fragancias' stock_bajo, nothing filters on the
+	// variantes_activas aggregate, so a plain COUNT can't drift from the list.
+	CountModelosEnvase(ctx context.Context, arg CountModelosEnvaseParams) (int64, error)
+	// Mirrors ListProductosPaginated's GROUP BY/HAVING (stock_bajo needs it),
+	// otherwise meta.total would drift from the actually-returned items — the
+	// same bug fixed in fragancias' CountFragancias.
+	CountProductos(ctx context.Context, arg CountProductosParams) (int64, error)
 	CountUsuarios(ctx context.Context, arg CountUsuariosParams) (int64, error)
+	CountVariantesActivasByModelo(ctx context.Context, modeloEnvaseID int64) (int64, error)
+	// Mirrors ListVariantesEnvasePaginated's GROUP BY/HAVING (stock_bajo needs
+	// it), otherwise meta.total would drift from the actually-returned items —
+	// the same bug fixed in fragancias' CountFragancias.
+	CountVariantesEnvase(ctx context.Context, arg CountVariantesEnvaseParams) (int64, error)
+	CountVentasByMetodoPago(ctx context.Context, metodoPagoID int64) (int64, error)
 	DeactivateUsuario(ctx context.Context, id int64) error
 	ExistsCorreo(ctx context.Context, lower string) (bool, error)
+	ExistsFraganciaNombreComercial(ctx context.Context, arg ExistsFraganciaNombreComercialParams) (bool, error)
+	ExistsMetodoPagoCodigo(ctx context.Context, arg ExistsMetodoPagoCodigoParams) (bool, error)
+	ExistsMetodoPagoNombre(ctx context.Context, arg ExistsMetodoPagoNombreParams) (bool, error)
+	ExistsModeloEnvaseTipoTamano(ctx context.Context, arg ExistsModeloEnvaseTipoTamanoParams) (bool, error)
+	ExistsProductoNombreCategoria(ctx context.Context, arg ExistsProductoNombreCategoriaParams) (bool, error)
+	ExistsVarianteEnvaseColor(ctx context.Context, arg ExistsVarianteEnvaseColorParams) (bool, error)
+	GetFraganciaByID(ctx context.Context, id int64) (GetFraganciaByIDRow, error)
+	GetFraganciaByIDIncludingDeleted(ctx context.Context, id int64) (Fragancia, error)
+	GetMetodoPagoByID(ctx context.Context, id int64) (MetodosPago, error)
+	GetMetodoPagoByIDIncludingDeleted(ctx context.Context, id int64) (MetodosPago, error)
+	GetModeloEnvaseByID(ctx context.Context, id int64) (GetModeloEnvaseByIDRow, error)
+	GetModeloEnvaseByIDIncludingDeleted(ctx context.Context, id int64) (ModelosEnvase, error)
 	GetPasswordResetByHash(ctx context.Context, tokenHash string) (PasswordReset, error)
+	GetProductoByID(ctx context.Context, id int64) (GetProductoByIDRow, error)
+	GetProductoByIDIncludingDeleted(ctx context.Context, id int64) (Producto, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	GetStockTotalByItem(ctx context.Context, arg GetStockTotalByItemParams) (GetStockTotalByItemRow, error)
 	GetUsuarioByCorreo(ctx context.Context, lower string) (Usuario, error)
 	GetUsuarioByID(ctx context.Context, id int64) (Usuario, error)
+	GetVarianteEnvaseByID(ctx context.Context, id int64) (GetVarianteEnvaseByIDRow, error)
+	GetVarianteEnvaseByIDIncludingDeleted(ctx context.Context, id int64) (VariantesEnvase, error)
+	HardDeleteMetodoPago(ctx context.Context, id int64) error
 	InsertAuditoria(ctx context.Context, arg InsertAuditoriaParams) error
+	InsertFragancia(ctx context.Context, arg InsertFraganciaParams) (Fragancia, error)
+	InsertMetodoPago(ctx context.Context, arg InsertMetodoPagoParams) (MetodosPago, error)
+	InsertModeloEnvase(ctx context.Context, arg InsertModeloEnvaseParams) (ModelosEnvase, error)
 	InsertPasswordReset(ctx context.Context, arg InsertPasswordResetParams) (PasswordReset, error)
+	InsertProducto(ctx context.Context, arg InsertProductoParams) (Producto, error)
 	InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) (RefreshToken, error)
+	InsertStockActual(ctx context.Context, arg InsertStockActualParams) error
 	InsertUsuario(ctx context.Context, arg InsertUsuarioParams) (Usuario, error)
+	InsertVarianteEnvase(ctx context.Context, arg InsertVarianteEnvaseParams) (VariantesEnvase, error)
+	ListFraganciasPaginated(ctx context.Context, arg ListFraganciasPaginatedParams) ([]ListFraganciasPaginatedRow, error)
+	ListMetodosPagoPaginated(ctx context.Context, arg ListMetodosPagoPaginatedParams) ([]MetodosPago, error)
+	ListModelosEnvasePaginated(ctx context.Context, arg ListModelosEnvasePaginatedParams) ([]ListModelosEnvasePaginatedRow, error)
+	ListProductosPaginated(ctx context.Context, arg ListProductosPaginatedParams) ([]ListProductosPaginatedRow, error)
 	ListUsuariosPaginated(ctx context.Context, arg ListUsuariosPaginatedParams) ([]Usuario, error)
+	ListVariantesEnvasePaginated(ctx context.Context, arg ListVariantesEnvasePaginatedParams) ([]ListVariantesEnvasePaginatedRow, error)
 	MarkPasswordResetUsed(ctx context.Context, id int64) error
+	RestoreFragancia(ctx context.Context, id int64) (Fragancia, error)
 	RevokeAllRefreshTokensByUser(ctx context.Context, usuarioID int64) error
 	RevokeRefreshToken(ctx context.Context, id int64) error
+	SoftDeleteFragancia(ctx context.Context, id int64) error
+	SoftDeleteMetodoPago(ctx context.Context, id int64) error
+	SoftDeleteModeloEnvase(ctx context.Context, id int64) error
+	SoftDeleteProducto(ctx context.Context, id int64) error
 	SoftDeleteUsuario(ctx context.Context, id int64) error
+	SoftDeleteVarianteEnvase(ctx context.Context, id int64) error
+	UpdateFragancia(ctx context.Context, arg UpdateFraganciaParams) (Fragancia, error)
 	UpdateLastLogin(ctx context.Context, id int64) error
+	UpdateMetodoPago(ctx context.Context, arg UpdateMetodoPagoParams) (MetodosPago, error)
+	UpdateModeloEnvase(ctx context.Context, arg UpdateModeloEnvaseParams) (ModelosEnvase, error)
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error
+	UpdateProducto(ctx context.Context, arg UpdateProductoParams) (Producto, error)
 	UpdateUsuario(ctx context.Context, arg UpdateUsuarioParams) (Usuario, error)
+	UpdateVarianteEnvase(ctx context.Context, arg UpdateVarianteEnvaseParams) (VariantesEnvase, error)
 }
 
 var _ Querier = (*Queries)(nil)

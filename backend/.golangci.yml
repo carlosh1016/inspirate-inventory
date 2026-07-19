@@ -23,6 +23,16 @@ linters-settings:
     min-complexity: 15
   goimports:
     local-prefixes: github.com/carlosh1016/inspirate-inventory/backend
+  misspell:
+    # This codebase is in Spanish; these words are correct Spanish that
+    # misspell's English dictionary otherwise flags as typos of English
+    # words (variantes/variante -> "variants"/"variant", producto ->
+    # "production").
+    ignore-words:
+      - variantes
+      - variante
+      - producto
+      - productos
 
 issues:
   exclude-rules:

@@ -14,7 +14,12 @@ import (
 
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers"
 	authhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auth"
+	fraganciashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/fragancias"
+	metodospagohandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/metodos_pago"
+	modelosenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/modelos_envase"
+	productoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/productos"
 	usuarioshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/usuarios"
+	variantesenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/variantes_envase"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/http/middleware"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/config"
 )
@@ -27,6 +32,11 @@ func NewRouter(
 	pool *pgxpool.Pool,
 	authHandler *authhandlers.Handler,
 	usuariosHandler *usuarioshandlers.Handler,
+	fraganciasHandler *fraganciashandlers.Handler,
+	modelosEnvaseHandler *modelosenvasehandlers.Handler,
+	variantesEnvaseHandler *variantesenvasehandlers.Handler,
+	productosHandler *productoshandlers.Handler,
+	metodosPagoHandler *metodospagohandlers.Handler,
 ) http.Handler {
 	logger.Debug("building router", "cors_origins", cfg.CORSAllowedOrigins)
 
@@ -50,6 +60,11 @@ func NewRouter(
 		r.Get("/health", handlers.Health(pool))
 		authHandler.Router(r)
 		usuariosHandler.Router(r)
+		fraganciasHandler.Router(r)
+		modelosEnvaseHandler.Router(r)
+		variantesEnvaseHandler.Router(r)
+		productosHandler.Router(r)
+		metodosPagoHandler.Router(r)
 	})
 
 	return r

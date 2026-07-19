@@ -10,6 +10,7 @@ import (
 	"net/netip"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 type CategoriaProductoEnum string
@@ -376,7 +377,7 @@ type Consignacione struct {
 	ID           int64              `json:"id"`
 	CuadreCajaID int64              `json:"cuadre_caja_id"`
 	UsuarioID    int64              `json:"usuario_id"`
-	Monto        pgtype.Numeric     `json:"monto"`
+	Monto        decimal.Decimal    `json:"monto"`
 	Banco        pgtype.Text        `json:"banco"`
 	Referencia   pgtype.Text        `json:"referencia"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -387,16 +388,16 @@ type CuadresCaja struct {
 	SedeID              int64              `json:"sede_id"`
 	Fecha               pgtype.Date        `json:"fecha"`
 	Estado              EstadoCuadreEnum   `json:"estado"`
-	FondoBase           pgtype.Numeric     `json:"fondo_base"`
-	TotalEfectivo       pgtype.Numeric     `json:"total_efectivo"`
-	TotalNequi          pgtype.Numeric     `json:"total_nequi"`
-	TotalDaviplata      pgtype.Numeric     `json:"total_daviplata"`
-	TotalTransferencia  pgtype.Numeric     `json:"total_transferencia"`
-	TotalOtros          pgtype.Numeric     `json:"total_otros"`
-	TotalPagos          pgtype.Numeric     `json:"total_pagos"`
-	TotalConsignaciones pgtype.Numeric     `json:"total_consignaciones"`
-	ValorTurno          pgtype.Numeric     `json:"valor_turno"`
-	SaldoCalculado      pgtype.Numeric     `json:"saldo_calculado"`
+	FondoBase           decimal.Decimal    `json:"fondo_base"`
+	TotalEfectivo       decimal.Decimal    `json:"total_efectivo"`
+	TotalNequi          decimal.Decimal    `json:"total_nequi"`
+	TotalDaviplata      decimal.Decimal    `json:"total_daviplata"`
+	TotalTransferencia  decimal.Decimal    `json:"total_transferencia"`
+	TotalOtros          decimal.Decimal    `json:"total_otros"`
+	TotalPagos          decimal.Decimal    `json:"total_pagos"`
+	TotalConsignaciones decimal.Decimal    `json:"total_consignaciones"`
+	ValorTurno          decimal.Decimal    `json:"valor_turno"`
+	SaldoCalculado      decimal.Decimal    `json:"saldo_calculado"`
 	Observaciones       pgtype.Text        `json:"observaciones"`
 	CerradoPorUsuarioID pgtype.Int8        `json:"cerrado_por_usuario_id"`
 	CerradoAt           pgtype.Timestamptz `json:"cerrado_at"`
@@ -410,7 +411,7 @@ type Fragancia struct {
 	NombreComercial   string             `json:"nombre_comercial"`
 	NombreAlternativo pgtype.Text        `json:"nombre_alternativo"`
 	Genero            GeneroEnum         `json:"genero"`
-	GramosMinimo      pgtype.Numeric     `json:"gramos_minimo"`
+	GramosMinimo      decimal.Decimal    `json:"gramos_minimo"`
 	Activo            bool               `json:"activo"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
@@ -435,16 +436,17 @@ type MetodosPago struct {
 	Activo    bool               `json:"activo"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type ModelosEnvase struct {
 	ID                 int64              `json:"id"`
 	Tipo               string             `json:"tipo"`
-	TamanoOz           pgtype.Numeric     `json:"tamano_oz"`
-	EquivGramos        pgtype.Numeric     `json:"equiv_gramos"`
-	PrecioSolo         pgtype.Numeric     `json:"precio_solo"`
-	PrecioConFragancia pgtype.Numeric     `json:"precio_con_fragancia"`
-	PrecioRecarga      pgtype.Numeric     `json:"precio_recarga"`
+	TamanoOz           decimal.Decimal    `json:"tamano_oz"`
+	EquivGramos        decimal.Decimal    `json:"equiv_gramos"`
+	PrecioSolo         decimal.Decimal    `json:"precio_solo"`
+	PrecioConFragancia decimal.Decimal    `json:"precio_con_fragancia"`
+	PrecioRecarga      decimal.Decimal    `json:"precio_recarga"`
 	Activo             bool               `json:"activo"`
 	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
@@ -459,9 +461,9 @@ type MovimientosInventario struct {
 	ItemID         int64              `json:"item_id"`
 	Tipo           TipoMovimientoEnum `json:"tipo"`
 	Ubicacion      UbicacionEnum      `json:"ubicacion"`
-	Cantidad       pgtype.Numeric     `json:"cantidad"`
-	StockAnterior  pgtype.Numeric     `json:"stock_anterior"`
-	StockPosterior pgtype.Numeric     `json:"stock_posterior"`
+	Cantidad       decimal.Decimal    `json:"cantidad"`
+	StockAnterior  decimal.Decimal    `json:"stock_anterior"`
+	StockPosterior decimal.Decimal    `json:"stock_posterior"`
 	Motivo         pgtype.Text        `json:"motivo"`
 	VentaID        pgtype.Int8        `json:"venta_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
@@ -472,7 +474,7 @@ type PagosCaja struct {
 	CuadreCajaID int64              `json:"cuadre_caja_id"`
 	UsuarioID    int64              `json:"usuario_id"`
 	Concepto     string             `json:"concepto"`
-	Monto        pgtype.Numeric     `json:"monto"`
+	Monto        decimal.Decimal    `json:"monto"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
@@ -490,7 +492,7 @@ type Producto struct {
 	SedeID      int64                 `json:"sede_id"`
 	Nombre      string                `json:"nombre"`
 	Categoria   CategoriaProductoEnum `json:"categoria"`
-	Precio      pgtype.Numeric        `json:"precio"`
+	Precio      decimal.Decimal       `json:"precio"`
 	StockMinimo int32                 `json:"stock_minimo"`
 	Activo      bool                  `json:"activo"`
 	DeletedAt   pgtype.Timestamptz    `json:"deleted_at"`
@@ -534,7 +536,7 @@ type StockActual struct {
 	TipoItem  TipoItemEnum       `json:"tipo_item"`
 	ItemID    int64              `json:"item_id"`
 	Ubicacion UbicacionEnum      `json:"ubicacion"`
-	Cantidad  pgtype.Numeric     `json:"cantidad"`
+	Cantidad  decimal.Decimal    `json:"cantidad"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
@@ -569,25 +571,25 @@ type Venta struct {
 	SedeID         int64              `json:"sede_id"`
 	UsuarioID      int64              `json:"usuario_id"`
 	MetodoPagoID   int64              `json:"metodo_pago_id"`
-	Subtotal       pgtype.Numeric     `json:"subtotal"`
-	DescuentoPct   pgtype.Numeric     `json:"descuento_pct"`
-	DescuentoMonto pgtype.Numeric     `json:"descuento_monto"`
-	Total          pgtype.Numeric     `json:"total"`
+	Subtotal       decimal.Decimal    `json:"subtotal"`
+	DescuentoPct   decimal.Decimal    `json:"descuento_pct"`
+	DescuentoMonto decimal.Decimal    `json:"descuento_monto"`
+	Total          decimal.Decimal    `json:"total"`
 	Observaciones  pgtype.Text        `json:"observaciones"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type VentaItem struct {
-	ID                 int64              `json:"id"`
-	VentaID            int64              `json:"venta_id"`
-	TipoLinea          TipoLineaEnum      `json:"tipo_linea"`
-	FraganciaID        pgtype.Int8        `json:"fragancia_id"`
-	VarianteEnvaseID   pgtype.Int8        `json:"variante_envase_id"`
-	ProductoID         pgtype.Int8        `json:"producto_id"`
-	FeromonaProductoID pgtype.Int8        `json:"feromona_producto_id"`
-	GramosFragancia    pgtype.Numeric     `json:"gramos_fragancia"`
-	Cantidad           int32              `json:"cantidad"`
-	PrecioUnitario     pgtype.Numeric     `json:"precio_unitario"`
-	Subtotal           pgtype.Numeric     `json:"subtotal"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	ID                 int64               `json:"id"`
+	VentaID            int64               `json:"venta_id"`
+	TipoLinea          TipoLineaEnum       `json:"tipo_linea"`
+	FraganciaID        pgtype.Int8         `json:"fragancia_id"`
+	VarianteEnvaseID   pgtype.Int8         `json:"variante_envase_id"`
+	ProductoID         pgtype.Int8         `json:"producto_id"`
+	FeromonaProductoID pgtype.Int8         `json:"feromona_producto_id"`
+	GramosFragancia    decimal.NullDecimal `json:"gramos_fragancia"`
+	Cantidad           int32               `json:"cantidad"`
+	PrecioUnitario     decimal.Decimal     `json:"precio_unitario"`
+	Subtotal           decimal.Decimal     `json:"subtotal"`
+	CreatedAt          pgtype.Timestamptz  `json:"created_at"`
 }

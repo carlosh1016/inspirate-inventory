@@ -52,10 +52,28 @@ func StringPtr(t pgtype.Text) *string {
 	return &s
 }
 
+// TextPtr converts *string into a nullable pgtype.Text: nil maps to NULL,
+// including a pointer to an empty string (unlike Text, which treats "" as
+// NULL too — TextPtr trusts the caller's own nil check).
+func TextPtr(s *string) pgtype.Text {
+	if s == nil {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: *s, Valid: true}
+}
+
 // Int8 converts *int64 into a nullable pgtype.Int8.
 func Int8(v *int64) pgtype.Int8 {
 	if v == nil {
 		return pgtype.Int8{}
 	}
 	return pgtype.Int8{Int64: *v, Valid: true}
+}
+
+// Int4 converts *int32 into a nullable pgtype.Int4.
+func Int4(v *int32) pgtype.Int4 {
+	if v == nil {
+		return pgtype.Int4{}
+	}
+	return pgtype.Int4{Int32: *v, Valid: true}
 }
