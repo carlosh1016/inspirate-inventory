@@ -27,12 +27,14 @@ linters-settings:
     # This codebase is in Spanish; these words are correct Spanish that
     # misspell's English dictionary otherwise flags as typos of English
     # words (variantes/variante -> "variants"/"variant", producto ->
-    # "production").
+    # "production", inventario -> "inventor", correccion -> "correction").
     ignore-words:
       - variantes
       - variante
       - producto
       - productos
+      - inventario
+      - correccion
 
 issues:
   exclude-rules:

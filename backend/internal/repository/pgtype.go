@@ -24,6 +24,15 @@ func TimePtr(ts pgtype.Timestamptz) *time.Time {
 	return &t
 }
 
+// TimestamptzPtr converts *time.Time into a nullable pgtype.Timestamptz:
+// nil maps to NULL.
+func TimestamptzPtr(t *time.Time) pgtype.Timestamptz {
+	if t == nil {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: *t, Valid: true}
+}
+
 // InetPtr parses an IP string for a nullable INET column. Returns nil (NULL)
 // for empty or unparsable input rather than failing the write — the IP is
 // diagnostic data, not a business invariant.
@@ -68,6 +77,15 @@ func Int8(v *int64) pgtype.Int8 {
 		return pgtype.Int8{}
 	}
 	return pgtype.Int8{Int64: *v, Valid: true}
+}
+
+// Int8Ptr converts a pgtype.Int8 into *int64, nil when NULL.
+func Int8Ptr(v pgtype.Int8) *int64 {
+	if !v.Valid {
+		return nil
+	}
+	n := v.Int64
+	return &n
 }
 
 // Int4 converts *int32 into a nullable pgtype.Int4.

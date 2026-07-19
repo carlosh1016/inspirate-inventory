@@ -22,10 +22,14 @@ const (
 // user-facing failures. Title and Detail are Spanish, meant to be shown to
 // the end user as-is.
 type DomainError struct {
-	Code    Code
-	Title   string
-	Detail  string
-	Fields  map[string][]string
+	Code   Code
+	Title  string
+	Detail string
+	Fields map[string][]string
+	// Extra carries a structured, error-specific payload the client can act
+	// on programmatically (e.g. per-item stock shortfall detail), surfaced
+	// as an RFC 7807 extension member. Most errors leave this nil.
+	Extra   any
 	Wrapped error
 }
 

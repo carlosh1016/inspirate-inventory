@@ -11,6 +11,120 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const countStockUnificado = `-- name: CountStockUnificado :one
+WITH stock_agregado AS (
+  SELECT
+    tipo_item,
+    item_id,
+    SUM(CASE WHEN ubicacion = 'vitrina' THEN cantidad ELSE 0 END) AS stock_vitrina,
+    SUM(CASE WHEN ubicacion = 'bodega' THEN cantidad ELSE 0 END) AS stock_bodega,
+    SUM(cantidad) AS stock_total
+  FROM stock_actual sa_raw
+  WHERE sa_raw.sede_id = $5::bigint
+  GROUP BY tipo_item, item_id
+)
+SELECT COUNT(*) FROM (
+  SELECT
+    f.id AS item_id,
+    COALESCE(sa.stock_total, 0)::numeric AS stock_total,
+    (COALESCE(sa.stock_total, 0) < f.gramos_minimo) AS bajo_minimo
+  FROM fragancias f
+  LEFT JOIN stock_agregado sa ON sa.tipo_item = 'fragancia' AND sa.item_id = f.id
+  WHERE f.deleted_at IS NULL
+    AND ($1::bool OR f.activo = true)
+    AND ($2::text = '' OR $2::text = 'fragancia')
+
+  UNION ALL
+
+  SELECT
+    ve.id AS item_id,
+    COALESCE(sa.stock_total, 0)::numeric AS stock_total,
+    (COALESCE(sa.stock_total, 0) < ve.stock_minimo) AS bajo_minimo
+  FROM variantes_envase ve
+  INNER JOIN modelos_envase me ON me.id = ve.modelo_envase_id
+  LEFT JOIN stock_agregado sa ON sa.tipo_item = 'variante_envase' AND sa.item_id = ve.id
+  WHERE ve.deleted_at IS NULL
+    AND ($1::bool OR ve.activo = true)
+    AND ($2::text = '' OR $2::text = 'variante_envase')
+
+  UNION ALL
+
+  SELECT
+    p.id AS item_id,
+    COALESCE(sa.stock_total, 0)::numeric AS stock_total,
+    (COALESCE(sa.stock_total, 0) < p.stock_minimo) AS bajo_minimo
+  FROM productos p
+  LEFT JOIN stock_agregado sa ON sa.tipo_item = 'producto' AND sa.item_id = p.id
+  WHERE p.deleted_at IS NULL
+    AND ($1::bool OR p.activo = true)
+    AND ($2::text = '' OR $2::text = 'producto')
+) unified
+WHERE
+  (NOT $3::bool OR bajo_minimo = true)
+  AND (NOT $4::bool OR stock_total = 0)
+`
+
+type CountStockUnificadoParams struct {
+	IncludeInactivos bool   `json:"include_inactivos"`
+	TipoItemFilter   string `json:"tipo_item_filter"`
+	StockBajo        bool   `json:"stock_bajo"`
+	StockCero        bool   `json:"stock_cero"`
+	SedeID           int64  `json:"sede_id"`
+}
+
+// Self-contained duplicate of ListStockUnificado's CTE/UNION/WHERE (same bug
+// class fixed in Tanda 2's CountFragancias: Count must mirror every filter
+// List applies, or meta.total drifts from the actually-returned items).
+func (q *Queries) CountStockUnificado(ctx context.Context, arg CountStockUnificadoParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStockUnificado,
+		arg.IncludeInactivos,
+		arg.TipoItemFilter,
+		arg.StockBajo,
+		arg.StockCero,
+		arg.SedeID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getStockActualForUpdate = `-- name: GetStockActualForUpdate :one
+SELECT id, sede_id, tipo_item, item_id, ubicacion, cantidad, updated_at FROM stock_actual
+WHERE sede_id = $1 AND tipo_item = $2 AND item_id = $3 AND ubicacion = $4
+FOR UPDATE
+`
+
+type GetStockActualForUpdateParams struct {
+	SedeID    int64         `json:"sede_id"`
+	TipoItem  TipoItemEnum  `json:"tipo_item"`
+	ItemID    int64         `json:"item_id"`
+	Ubicacion UbicacionEnum `json:"ubicacion"`
+}
+
+// Locks the row for the duration of the caller's transaction so concurrent
+// movimientos against the same (sede, tipo_item, item, ubicacion) serialize
+// instead of racing. Relies on InitializeStock having already created the
+// vitrina+bodega rows when the item itself was created.
+func (q *Queries) GetStockActualForUpdate(ctx context.Context, arg GetStockActualForUpdateParams) (StockActual, error) {
+	row := q.db.QueryRow(ctx, getStockActualForUpdate,
+		arg.SedeID,
+		arg.TipoItem,
+		arg.ItemID,
+		arg.Ubicacion,
+	)
+	var i StockActual
+	err := row.Scan(
+		&i.ID,
+		&i.SedeID,
+		&i.TipoItem,
+		&i.ItemID,
+		&i.Ubicacion,
+		&i.Cantidad,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getStockTotalByItem = `-- name: GetStockTotalByItem :one
 SELECT
   COALESCE(SUM(CASE WHEN ubicacion = 'vitrina' THEN cantidad ELSE 0 END), 0)::numeric AS vitrina,
@@ -60,4 +174,185 @@ func (q *Queries) InsertStockActual(ctx context.Context, arg InsertStockActualPa
 		arg.Cantidad,
 	)
 	return err
+}
+
+const listStockUnificado = `-- name: ListStockUnificado :many
+WITH stock_agregado AS (
+  SELECT
+    tipo_item,
+    item_id,
+    SUM(CASE WHEN ubicacion = 'vitrina' THEN cantidad ELSE 0 END) AS stock_vitrina,
+    SUM(CASE WHEN ubicacion = 'bodega' THEN cantidad ELSE 0 END) AS stock_bodega,
+    SUM(cantidad) AS stock_total
+  FROM stock_actual sa_raw
+  WHERE sa_raw.sede_id = $7::bigint
+  GROUP BY tipo_item, item_id
+)
+SELECT tipo_item, item_id, nombre, detalle_extra, stock_vitrina, stock_bodega, stock_total, minimo, bajo_minimo, unidad FROM (
+  -- Fragancias
+  SELECT
+    'fragancia'::text AS tipo_item,
+    f.id AS item_id,
+    f.nombre_comercial AS nombre,
+    CASE WHEN f.nombre_alternativo IS NOT NULL
+      THEN CONCAT(f.nombre_alternativo, ' (', f.genero::text, ')')
+      ELSE f.genero::text
+    END AS detalle_extra,
+    COALESCE(sa.stock_vitrina, 0)::numeric AS stock_vitrina,
+    COALESCE(sa.stock_bodega, 0)::numeric AS stock_bodega,
+    COALESCE(sa.stock_total, 0)::numeric AS stock_total,
+    f.gramos_minimo AS minimo,
+    (COALESCE(sa.stock_total, 0) < f.gramos_minimo) AS bajo_minimo,
+    'gramos'::text AS unidad
+  FROM fragancias f
+  LEFT JOIN stock_agregado sa ON sa.tipo_item = 'fragancia' AND sa.item_id = f.id
+  WHERE f.deleted_at IS NULL
+    AND ($3::bool OR f.activo = true)
+    AND ($4::text = '' OR $4::text = 'fragancia')
+
+  UNION ALL
+
+  -- Variantes de envase
+  SELECT
+    'variante_envase'::text AS tipo_item,
+    ve.id AS item_id,
+    CONCAT(me.tipo, ' ', me.tamano_oz::text, 'oz ', ve.color) AS nombre,
+    CONCAT('Precio con fragancia: ', me.precio_con_fragancia::text) AS detalle_extra,
+    COALESCE(sa.stock_vitrina, 0)::numeric AS stock_vitrina,
+    COALESCE(sa.stock_bodega, 0)::numeric AS stock_bodega,
+    COALESCE(sa.stock_total, 0)::numeric AS stock_total,
+    ve.stock_minimo::numeric AS minimo,
+    (COALESCE(sa.stock_total, 0) < ve.stock_minimo) AS bajo_minimo,
+    'unidades'::text AS unidad
+  FROM variantes_envase ve
+  INNER JOIN modelos_envase me ON me.id = ve.modelo_envase_id
+  LEFT JOIN stock_agregado sa ON sa.tipo_item = 'variante_envase' AND sa.item_id = ve.id
+  WHERE ve.deleted_at IS NULL
+    AND ($3::bool OR ve.activo = true)
+    AND ($4::text = '' OR $4::text = 'variante_envase')
+
+  UNION ALL
+
+  -- Productos
+  SELECT
+    'producto'::text AS tipo_item,
+    p.id AS item_id,
+    p.nombre,
+    p.categoria::text AS detalle_extra,
+    COALESCE(sa.stock_vitrina, 0)::numeric AS stock_vitrina,
+    COALESCE(sa.stock_bodega, 0)::numeric AS stock_bodega,
+    COALESCE(sa.stock_total, 0)::numeric AS stock_total,
+    p.stock_minimo::numeric AS minimo,
+    (COALESCE(sa.stock_total, 0) < p.stock_minimo) AS bajo_minimo,
+    'unidades'::text AS unidad
+  FROM productos p
+  LEFT JOIN stock_agregado sa ON sa.tipo_item = 'producto' AND sa.item_id = p.id
+  WHERE p.deleted_at IS NULL
+    AND ($3::bool OR p.activo = true)
+    AND ($4::text = '' OR $4::text = 'producto')
+) unified
+WHERE
+  (NOT $5::bool OR bajo_minimo = true)
+  AND (NOT $6::bool OR stock_total = 0)
+ORDER BY tipo_item ASC, nombre ASC
+LIMIT $1 OFFSET $2
+`
+
+type ListStockUnificadoParams struct {
+	Limit            int32  `json:"limit"`
+	Offset           int32  `json:"offset"`
+	IncludeInactivos bool   `json:"include_inactivos"`
+	TipoItemFilter   string `json:"tipo_item_filter"`
+	StockBajo        bool   `json:"stock_bajo"`
+	StockCero        bool   `json:"stock_cero"`
+	SedeID           int64  `json:"sede_id"`
+}
+
+type ListStockUnificadoRow struct {
+	TipoItem     string          `json:"tipo_item"`
+	ItemID       int64           `json:"item_id"`
+	Nombre       string          `json:"nombre"`
+	DetalleExtra string          `json:"detalle_extra"`
+	StockVitrina decimal.Decimal `json:"stock_vitrina"`
+	StockBodega  decimal.Decimal `json:"stock_bodega"`
+	StockTotal   decimal.Decimal `json:"stock_total"`
+	Minimo       decimal.Decimal `json:"minimo"`
+	BajoMinimo   bool            `json:"bajo_minimo"`
+	Unidad       string          `json:"unidad"`
+}
+
+func (q *Queries) ListStockUnificado(ctx context.Context, arg ListStockUnificadoParams) ([]ListStockUnificadoRow, error) {
+	rows, err := q.db.Query(ctx, listStockUnificado,
+		arg.Limit,
+		arg.Offset,
+		arg.IncludeInactivos,
+		arg.TipoItemFilter,
+		arg.StockBajo,
+		arg.StockCero,
+		arg.SedeID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStockUnificadoRow{}
+	for rows.Next() {
+		var i ListStockUnificadoRow
+		if err := rows.Scan(
+			&i.TipoItem,
+			&i.ItemID,
+			&i.Nombre,
+			&i.DetalleExtra,
+			&i.StockVitrina,
+			&i.StockBodega,
+			&i.StockTotal,
+			&i.Minimo,
+			&i.BajoMinimo,
+			&i.Unidad,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const upsertStockActual = `-- name: UpsertStockActual :one
+INSERT INTO stock_actual (sede_id, tipo_item, item_id, ubicacion, cantidad)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (sede_id, tipo_item, item_id, ubicacion)
+DO UPDATE SET cantidad = EXCLUDED.cantidad, updated_at = NOW()
+RETURNING id, sede_id, tipo_item, item_id, ubicacion, cantidad, updated_at
+`
+
+type UpsertStockActualParams struct {
+	SedeID    int64           `json:"sede_id"`
+	TipoItem  TipoItemEnum    `json:"tipo_item"`
+	ItemID    int64           `json:"item_id"`
+	Ubicacion UbicacionEnum   `json:"ubicacion"`
+	Cantidad  decimal.Decimal `json:"cantidad"`
+}
+
+func (q *Queries) UpsertStockActual(ctx context.Context, arg UpsertStockActualParams) (StockActual, error) {
+	row := q.db.QueryRow(ctx, upsertStockActual,
+		arg.SedeID,
+		arg.TipoItem,
+		arg.ItemID,
+		arg.Ubicacion,
+		arg.Cantidad,
+	)
+	var i StockActual
+	err := row.Scan(
+		&i.ID,
+		&i.SedeID,
+		&i.TipoItem,
+		&i.ItemID,
+		&i.Ubicacion,
+		&i.Cantidad,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

@@ -19,10 +19,18 @@ type Querier interface {
 	// No HAVING here: unlike fragancias' stock_bajo, nothing filters on the
 	// variantes_activas aggregate, so a plain COUNT can't drift from the list.
 	CountModelosEnvase(ctx context.Context, arg CountModelosEnvaseParams) (int64, error)
+	// Mirrors ListMovimientosPaginated's filters exactly (no HAVING/aggregate
+	// here, but the same principle applies: any filter added to List must be
+	// added here too, or meta.total drifts from the actually-returned items).
+	CountMovimientos(ctx context.Context, arg CountMovimientosParams) (int64, error)
 	// Mirrors ListProductosPaginated's GROUP BY/HAVING (stock_bajo needs it),
 	// otherwise meta.total would drift from the actually-returned items — the
 	// same bug fixed in fragancias' CountFragancias.
 	CountProductos(ctx context.Context, arg CountProductosParams) (int64, error)
+	// Self-contained duplicate of ListStockUnificado's CTE/UNION/WHERE (same bug
+	// class fixed in Tanda 2's CountFragancias: Count must mirror every filter
+	// List applies, or meta.total drifts from the actually-returned items).
+	CountStockUnificado(ctx context.Context, arg CountStockUnificadoParams) (int64, error)
 	CountUsuarios(ctx context.Context, arg CountUsuariosParams) (int64, error)
 	CountVariantesActivasByModelo(ctx context.Context, modeloEnvaseID int64) (int64, error)
 	// Mirrors ListVariantesEnvasePaginated's GROUP BY/HAVING (stock_bajo needs
@@ -48,6 +56,11 @@ type Querier interface {
 	GetProductoByID(ctx context.Context, id int64) (GetProductoByIDRow, error)
 	GetProductoByIDIncludingDeleted(ctx context.Context, id int64) (Producto, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	// Locks the row for the duration of the caller's transaction so concurrent
+	// movimientos against the same (sede, tipo_item, item, ubicacion) serialize
+	// instead of racing. Relies on InitializeStock having already created the
+	// vitrina+bodega rows when the item itself was created.
+	GetStockActualForUpdate(ctx context.Context, arg GetStockActualForUpdateParams) (StockActual, error)
 	GetStockTotalByItem(ctx context.Context, arg GetStockTotalByItemParams) (GetStockTotalByItemRow, error)
 	GetUsuarioByCorreo(ctx context.Context, lower string) (Usuario, error)
 	GetUsuarioByID(ctx context.Context, id int64) (Usuario, error)
@@ -58,6 +71,7 @@ type Querier interface {
 	InsertFragancia(ctx context.Context, arg InsertFraganciaParams) (Fragancia, error)
 	InsertMetodoPago(ctx context.Context, arg InsertMetodoPagoParams) (MetodosPago, error)
 	InsertModeloEnvase(ctx context.Context, arg InsertModeloEnvaseParams) (ModelosEnvase, error)
+	InsertMovimiento(ctx context.Context, arg InsertMovimientoParams) (MovimientosInventario, error)
 	InsertPasswordReset(ctx context.Context, arg InsertPasswordResetParams) (PasswordReset, error)
 	InsertProducto(ctx context.Context, arg InsertProductoParams) (Producto, error)
 	InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) (RefreshToken, error)
@@ -67,7 +81,9 @@ type Querier interface {
 	ListFraganciasPaginated(ctx context.Context, arg ListFraganciasPaginatedParams) ([]ListFraganciasPaginatedRow, error)
 	ListMetodosPagoPaginated(ctx context.Context, arg ListMetodosPagoPaginatedParams) ([]MetodosPago, error)
 	ListModelosEnvasePaginated(ctx context.Context, arg ListModelosEnvasePaginatedParams) ([]ListModelosEnvasePaginatedRow, error)
+	ListMovimientosPaginated(ctx context.Context, arg ListMovimientosPaginatedParams) ([]ListMovimientosPaginatedRow, error)
 	ListProductosPaginated(ctx context.Context, arg ListProductosPaginatedParams) ([]ListProductosPaginatedRow, error)
+	ListStockUnificado(ctx context.Context, arg ListStockUnificadoParams) ([]ListStockUnificadoRow, error)
 	ListUsuariosPaginated(ctx context.Context, arg ListUsuariosPaginatedParams) ([]Usuario, error)
 	ListVariantesEnvasePaginated(ctx context.Context, arg ListVariantesEnvasePaginatedParams) ([]ListVariantesEnvasePaginatedRow, error)
 	MarkPasswordResetUsed(ctx context.Context, id int64) error
@@ -88,6 +104,7 @@ type Querier interface {
 	UpdateProducto(ctx context.Context, arg UpdateProductoParams) (Producto, error)
 	UpdateUsuario(ctx context.Context, arg UpdateUsuarioParams) (Usuario, error)
 	UpdateVarianteEnvase(ctx context.Context, arg UpdateVarianteEnvaseParams) (VariantesEnvase, error)
+	UpsertStockActual(ctx context.Context, arg UpsertStockActualParams) (StockActual, error)
 }
 
 var _ Querier = (*Queries)(nil)

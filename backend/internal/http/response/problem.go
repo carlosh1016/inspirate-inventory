@@ -18,6 +18,7 @@ type Problem struct {
 	Detail   string              `json:"detail,omitempty"`
 	Instance string              `json:"instance,omitempty"`
 	Errors   map[string][]string `json:"errors,omitempty"`
+	Extra    any                 `json:"extra,omitempty"`
 }
 
 // WriteError maps err to a Problem Details response. Non-DomainError values
@@ -53,5 +54,6 @@ func writeProblem(w http.ResponseWriter, r *http.Request, domainErr *domainerror
 		Detail:   domainErr.Detail,
 		Instance: r.URL.Path,
 		Errors:   domainErr.Fields,
+		Extra:    domainErr.Extra,
 	})
 }

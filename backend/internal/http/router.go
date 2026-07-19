@@ -17,7 +17,9 @@ import (
 	fraganciashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/fragancias"
 	metodospagohandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/metodos_pago"
 	modelosenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/modelos_envase"
+	movimientoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/movimientos"
 	productoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/productos"
+	stockhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/stock"
 	usuarioshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/usuarios"
 	variantesenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/variantes_envase"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/http/middleware"
@@ -37,6 +39,8 @@ func NewRouter(
 	variantesEnvaseHandler *variantesenvasehandlers.Handler,
 	productosHandler *productoshandlers.Handler,
 	metodosPagoHandler *metodospagohandlers.Handler,
+	stockHandler *stockhandlers.Handler,
+	movimientosHandler *movimientoshandlers.Handler,
 ) http.Handler {
 	logger.Debug("building router", "cors_origins", cfg.CORSAllowedOrigins)
 
@@ -65,6 +69,8 @@ func NewRouter(
 		variantesEnvaseHandler.Router(r)
 		productosHandler.Router(r)
 		metodosPagoHandler.Router(r)
+		stockHandler.Router(r)
+		movimientosHandler.Router(r)
 	})
 
 	return r

@@ -18,7 +18,9 @@ import (
 	fraganciashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/fragancias"
 	metodospagohandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/metodos_pago"
 	modelosenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/modelos_envase"
+	movimientoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/movimientos"
 	productoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/productos"
+	stockhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/stock"
 	usuarioshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/usuarios"
 	variantesenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/variantes_envase"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/config"
@@ -32,6 +34,7 @@ import (
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/fragancias"
 	metodospago "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/metodos_pago"
 	modelosenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/modelos_envase"
+	movimientos "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/movimientos"
 	passwordresets "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/password_resets"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/productos"
 	refreshtokens "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/refresh_tokens"
@@ -42,7 +45,9 @@ import (
 	usecasefragancias "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/fragancias"
 	usecasemetodospago "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/metodos_pago"
 	usecasemodelosenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/modelos_envase"
+	usecasemovimientos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/movimientos"
 	usecaseproductos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/productos"
+	usecasestock "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/stock"
 	usecaseusuarios "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/usuarios"
 	usecasevariantesenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/variantes_envase"
 )
@@ -72,9 +77,9 @@ func run() error {
 	}
 	defer pool.Close()
 
-	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler := buildHandlers(cfg, pool)
+	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler := buildHandlers(cfg, pool)
 
-	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler)
+	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler)
 	server := apphttp.NewServer(cfg.Port, router)
 
 	serverErr := make(chan error, 1)
@@ -103,7 +108,7 @@ func run() error {
 	return nil
 }
 
-func buildHandlers(cfg *config.Config, pool *pgxpool.Pool) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler) {
+func buildHandlers(cfg *config.Config, pool *pgxpool.Pool) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler) {
 	usuariosRepo := usuarios.NewPostgres(pool)
 	refreshTokensRepo := refreshtokens.NewPostgres(pool)
 	passwordResetsRepo := passwordresets.NewPostgres(pool)
@@ -114,6 +119,7 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool) (*authhandlers.Handle
 	variantesEnvaseRepo := variantesenvase.NewPostgres(pool)
 	productosRepo := productos.NewPostgres(pool)
 	metodosPagoRepo := metodospago.NewPostgres(pool)
+	movimientosRepo := movimientos.NewPostgres(pool)
 
 	jwtManager := jwt.New(cfg.JWTSecret, cfg.JWTAccessTTL)
 	v := validator.New()
@@ -158,5 +164,11 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool) (*authhandlers.Handle
 	metodosPagoService := usecasemetodospago.NewService(metodosPagoRepo, auditoriaRepo)
 	metodosPagoHandler := metodospagohandlers.NewHandler(metodosPagoService, jwtManager, v)
 
-	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler
+	stockService := usecasestock.NewService(stockActualRepo)
+	stockHandler := stockhandlers.NewHandler(stockService, jwtManager)
+
+	movimientosService := usecasemovimientos.NewService(pool, movimientosRepo, stockActualRepo, fraganciasRepo, variantesEnvaseRepo, productosRepo, auditoriaRepo)
+	movimientosHandler := movimientoshandlers.NewHandler(movimientosService, jwtManager, v)
+
+	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler
 }
