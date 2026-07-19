@@ -1,4 +1,5 @@
-// Package logger provee un logger estructurado basado en log/slog.
+// Package logger provides structured logging via log/slog: JSON in
+// production, human-readable text in development.
 package logger
 
 import (
@@ -7,12 +8,19 @@ import (
 	"strings"
 )
 
-// New crea un *slog.Logger que escribe JSON a stdout con el nivel indicado.
-// level acepta: "debug", "info", "warn", "error" (default: "info").
-func New(level string) *slog.Logger {
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: parseLevel(level),
-	})
+// New creates a *slog.Logger. env selects the handler ("production" -> JSON,
+// anything else -> text). level accepts "debug", "info", "warn", "error"
+// (default: "info").
+func New(env, level string) *slog.Logger {
+	opts := &slog.HandlerOptions{Level: parseLevel(level)}
+
+	var handler slog.Handler
+	if env == "production" {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	} else {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	}
+
 	return slog.New(handler)
 }
 

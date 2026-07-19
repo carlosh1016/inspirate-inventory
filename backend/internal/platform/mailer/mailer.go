@@ -1,17 +1,9 @@
-// Package mailer define la interfaz de envío de correos y su implementación
-// para Resend, además de un mock para tests.
+// Package mailer sends transactional email (currently just password reset).
 package mailer
 
 import "context"
 
-// Message representa un correo a enviar.
-type Message struct {
-	To      string
-	Subject string
-	HTML    string
-}
-
-// Mailer envía correos electrónicos.
+// Mailer sends the password-reset email to a user.
 type Mailer interface {
-	Send(ctx context.Context, msg Message) error
+	SendPasswordReset(ctx context.Context, to, resetURL, nombreCompleto string) error
 }
