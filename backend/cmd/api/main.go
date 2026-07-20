@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "time/tzdata" // ensures America/Bogota resolves without relying on OS tzdata
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	apphttp "github.com/carlosh1016/inspirate-inventory/backend/internal/http"
@@ -23,6 +25,7 @@ import (
 	stockhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/stock"
 	usuarioshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/usuarios"
 	variantesenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/variantes_envase"
+	ventashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/ventas"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/config"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/db"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/jwt"
@@ -32,6 +35,7 @@ import (
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/validator"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/auditoria"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/fragancias"
+	idempotencykeys "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/idempotency_keys"
 	metodospago "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/metodos_pago"
 	modelosenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/modelos_envase"
 	movimientos "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/movimientos"
@@ -41,6 +45,8 @@ import (
 	stockactual "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/stock_actual"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/usuarios"
 	variantesenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/variantes_envase"
+	ventaitems "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/venta_items"
+	ventasrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/ventas"
 	usecaseauth "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/auth"
 	usecasefragancias "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/fragancias"
 	usecasemetodospago "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/metodos_pago"
@@ -50,6 +56,7 @@ import (
 	usecasestock "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/stock"
 	usecaseusuarios "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/usuarios"
 	usecasevariantesenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/variantes_envase"
+	usecaseventas "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/ventas"
 )
 
 func main() {
@@ -77,10 +84,12 @@ func run() error {
 	}
 	defer pool.Close()
 
-	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler := buildHandlers(cfg, pool)
+	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, idempotencyKeysRepo := buildHandlers(cfg, pool, log)
 
-	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler)
+	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler)
 	server := apphttp.NewServer(cfg.Port, router)
+
+	go runIdempotencyKeyCleanup(ctx, idempotencyKeysRepo, log)
 
 	serverErr := make(chan error, 1)
 	go func() {
@@ -108,7 +117,46 @@ func run() error {
 	return nil
 }
 
-func buildHandlers(cfg *config.Config, pool *pgxpool.Pool) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler) {
+// idempotencyCleanupInterval is how often expired idempotency_keys rows are
+// purged. An hour is frequent enough given the 24h TTL those rows carry,
+// and infrequent enough not to matter for load.
+const idempotencyCleanupInterval = 1 * time.Hour
+
+// runIdempotencyKeyCleanup periodically deletes expired idempotency_keys
+// rows until ctx is done (the same context signal.NotifyContext ties to
+// shutdown) — fire-and-forget from run()'s perspective, no separate cancel
+// plumbing needed.
+func runIdempotencyKeyCleanup(ctx context.Context, repo idempotencykeys.Repository, log *slog.Logger) {
+	ticker := time.NewTicker(idempotencyCleanupInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := repo.DeleteExpired(ctx); err != nil {
+				log.ErrorContext(ctx, "failed to delete expired idempotency keys", "error", err)
+			}
+		}
+	}
+}
+
+// resolveBogotaLocation loads America/Bogota, falling back to a fixed
+// UTC-5 offset if the timezone database is unavailable — Colombia has no
+// daylight saving, so UTC-5 is exact year-round. The blank import of
+// time/tzdata above means this fallback essentially never triggers in
+// practice; it exists as defense in depth, not as the expected path.
+func resolveBogotaLocation(log *slog.Logger) *time.Location {
+	loc, err := time.LoadLocation("America/Bogota")
+	if err != nil {
+		log.Warn("could not load America/Bogota timezone, falling back to fixed UTC-5", "error", err)
+		return time.FixedZone("America/Bogota", -5*60*60)
+	}
+	return loc
+}
+
+func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler, *ventashandlers.Handler, idempotencykeys.Repository) {
 	usuariosRepo := usuarios.NewPostgres(pool)
 	refreshTokensRepo := refreshtokens.NewPostgres(pool)
 	passwordResetsRepo := passwordresets.NewPostgres(pool)
@@ -120,6 +168,9 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool) (*authhandlers.Handle
 	productosRepo := productos.NewPostgres(pool)
 	metodosPagoRepo := metodospago.NewPostgres(pool)
 	movimientosRepo := movimientos.NewPostgres(pool)
+	ventasRepo := ventasrepo.NewPostgres(pool)
+	ventaItemsRepo := ventaitems.NewPostgres(pool)
+	idempotencyKeysRepo := idempotencykeys.NewPostgres(pool)
 
 	jwtManager := jwt.New(cfg.JWTSecret, cfg.JWTAccessTTL)
 	v := validator.New()
@@ -170,5 +221,24 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool) (*authhandlers.Handle
 	movimientosService := usecasemovimientos.NewService(pool, movimientosRepo, stockActualRepo, fraganciasRepo, variantesEnvaseRepo, productosRepo, auditoriaRepo)
 	movimientosHandler := movimientoshandlers.NewHandler(movimientosService, jwtManager, v)
 
-	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler
+	ventasService := usecaseventas.NewService(
+		pool,
+		ventasRepo,
+		ventaItemsRepo,
+		idempotencyKeysRepo,
+		movimientosService,
+		movimientosRepo,
+		fraganciasRepo,
+		variantesEnvaseRepo,
+		modelosEnvaseRepo,
+		productosRepo,
+		metodosPagoRepo,
+		auditoriaRepo,
+		usecaseventas.NewPricingService(),
+		usecaseventas.NewDiscountService(),
+		resolveBogotaLocation(log),
+	)
+	ventasHandler := ventashandlers.NewHandler(ventasService, jwtManager, v)
+
+	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, idempotencyKeysRepo
 }

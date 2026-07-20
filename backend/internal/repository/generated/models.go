@@ -427,6 +427,7 @@ type IdempotencyKey struct {
 	ResponseBody   []byte             `json:"response_body"`
 	ExpiresAt      pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	RequestHash    string             `json:"request_hash"`
 }
 
 type MetodosPago struct {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 // Timestamptz converts a time.Time into a valid pgtype.Timestamptz.
@@ -94,4 +95,22 @@ func Int4(v *int32) pgtype.Int4 {
 		return pgtype.Int4{}
 	}
 	return pgtype.Int4{Int32: *v, Valid: true}
+}
+
+// NullDecimal converts *decimal.Decimal into a nullable decimal.NullDecimal.
+func NullDecimal(v *decimal.Decimal) decimal.NullDecimal {
+	if v == nil {
+		return decimal.NullDecimal{}
+	}
+	return decimal.NullDecimal{Decimal: *v, Valid: true}
+}
+
+// NullDecimalPtr converts a decimal.NullDecimal into *decimal.Decimal, nil
+// when NULL.
+func NullDecimalPtr(v decimal.NullDecimal) *decimal.Decimal {
+	if !v.Valid {
+		return nil
+	}
+	d := v.Decimal
+	return &d
 }

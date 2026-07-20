@@ -22,6 +22,7 @@ import (
 	stockhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/stock"
 	usuarioshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/usuarios"
 	variantesenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/variantes_envase"
+	ventashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/ventas"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/http/middleware"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/config"
 )
@@ -41,6 +42,7 @@ func NewRouter(
 	metodosPagoHandler *metodospagohandlers.Handler,
 	stockHandler *stockhandlers.Handler,
 	movimientosHandler *movimientoshandlers.Handler,
+	ventasHandler *ventashandlers.Handler,
 ) http.Handler {
 	logger.Debug("building router", "cors_origins", cfg.CORSAllowedOrigins)
 
@@ -71,6 +73,7 @@ func NewRouter(
 		metodosPagoHandler.Router(r)
 		stockHandler.Router(r)
 		movimientosHandler.Router(r)
+		ventasHandler.Router(r)
 	})
 
 	return r
