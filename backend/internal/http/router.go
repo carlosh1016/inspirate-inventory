@@ -14,11 +14,13 @@ import (
 
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers"
 	authhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auth"
+	cuadreshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/cuadres"
 	fraganciashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/fragancias"
 	metodospagohandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/metodos_pago"
 	modelosenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/modelos_envase"
 	movimientoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/movimientos"
 	productoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/productos"
+	sesioneshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/sesiones"
 	stockhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/stock"
 	usuarioshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/usuarios"
 	variantesenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/variantes_envase"
@@ -43,6 +45,8 @@ func NewRouter(
 	stockHandler *stockhandlers.Handler,
 	movimientosHandler *movimientoshandlers.Handler,
 	ventasHandler *ventashandlers.Handler,
+	cuadresHandler *cuadreshandlers.Handler,
+	sesionesHandler *sesioneshandlers.Handler,
 ) http.Handler {
 	logger.Debug("building router", "cors_origins", cfg.CORSAllowedOrigins)
 
@@ -74,6 +78,8 @@ func NewRouter(
 		stockHandler.Router(r)
 		movimientosHandler.Router(r)
 		ventasHandler.Router(r)
+		cuadresHandler.Router(r)
+		sesionesHandler.Router(r)
 	})
 
 	return r

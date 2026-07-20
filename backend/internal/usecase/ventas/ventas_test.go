@@ -746,3 +746,53 @@ func TestResumenHoyExcluyeVentasDeAyer(t *testing.T) {
 		t.Fatalf("expected yesterday's venta excluded from today's resumen, got ventas_count=%d", resumen.Resumen.VentasCount)
 	}
 }
+
+// --- Integración con Tanda 5: CajaStatusService ---
+
+func TestCreateVentaBloqueaSiCuadreEstaCerrado(t *testing.T) {
+	env := newTestEnv(t)
+	ctx := context.Background()
+	productoID := seedProducto(t, env, "Vela")
+	setVitrinaStock(t, env, "producto", productoID, "10")
+
+	env.cajaStatus.Err = domainerrors.NewBusinessRule(
+		"Cuadre de caja cerrado",
+		"El cuadre de caja del día está cerrado. No se pueden registrar más ventas para hoy.",
+	)
+
+	_, err := env.service.CreateVenta(ctx, usecaseventas.CreateVentaInput{
+		SedeID: env.sedeID, UsuarioID: env.vendedoraID, MetodoPagoID: env.metodoPagoID,
+		Items: []usecaseventas.CreateVentaItemInput{{TipoLinea: domainventas.TipoLineaProductoOtro, ProductoID: &productoID, Cantidad: 1}},
+	})
+	if err == nil {
+		t.Fatal("expected a business_rule error, got nil")
+	}
+	assertCode(t, err, domainerrors.CodeBusinessRule)
+
+	var count int
+	if err := env.pool.QueryRow(ctx, `SELECT COUNT(*) FROM ventas`).Scan(&count); err != nil {
+		t.Fatalf("counting ventas: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected no venta to have been created, got %d", count)
+	}
+}
+
+func TestCreateVentaPermiteSiCuadreAbiertoOSinCuadre(t *testing.T) {
+	env := newTestEnv(t)
+	ctx := context.Background()
+	productoID := seedProducto(t, env, "Vela")
+	setVitrinaStock(t, env, "producto", productoID, "10")
+
+	// env.cajaStatus.Err is nil by default (no cuadre / cuadre abierto).
+	out, err := env.service.CreateVenta(ctx, usecaseventas.CreateVentaInput{
+		SedeID: env.sedeID, UsuarioID: env.vendedoraID, MetodoPagoID: env.metodoPagoID,
+		Items: []usecaseventas.CreateVentaItemInput{{TipoLinea: domainventas.TipoLineaProductoOtro, ProductoID: &productoID, Cantidad: 1}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out.Venta == nil {
+		t.Fatal("expected the venta to be created")
+	}
+}

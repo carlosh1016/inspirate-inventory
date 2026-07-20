@@ -6,11 +6,16 @@ package generated
 
 import (
 	"context"
+
+	"github.com/shopspring/decimal"
 )
 
 type Querier interface {
 	ActivateUsuario(ctx context.Context, id int64) error
+	CerrarSesion(ctx context.Context, arg CerrarSesionParams) (SesionesLaborale, error)
 	CountActiveAdmins(ctx context.Context) (int64, error)
+	// Mismos filtros que ListCuadresPaginated (sin joins ni columnas extra).
+	CountCuadres(ctx context.Context, arg CountCuadresParams) (int64, error)
 	// Mirrors ListFraganciasPaginated's GROUP BY/HAVING (stock_bajo needs it),
 	// otherwise meta.total would drift from the actually-returned items.
 	CountFragancias(ctx context.Context, arg CountFraganciasParams) (int64, error)
@@ -27,6 +32,8 @@ type Querier interface {
 	// otherwise meta.total would drift from the actually-returned items — the
 	// same bug fixed in fragancias' CountFragancias.
 	CountProductos(ctx context.Context, arg CountProductosParams) (int64, error)
+	// Mismos filtros que ListSesiones (sin joins ni columnas extra).
+	CountSesiones(ctx context.Context, arg CountSesionesParams) (int64, error)
 	// Self-contained duplicate of ListStockUnificado's CTE/UNION/WHERE (same bug
 	// class fixed in Tanda 2's CountFragancias: Count must mirror every filter
 	// List applies, or meta.total drifts from the actually-returned items).
@@ -42,14 +49,24 @@ type Querier interface {
 	CountVentas(ctx context.Context, arg CountVentasParams) (int64, error)
 	CountVentasByMetodoPago(ctx context.Context, metodoPagoID int64) (int64, error)
 	DeactivateUsuario(ctx context.Context, id int64) error
+	DeleteConsignacion(ctx context.Context, id int64) error
 	DeleteExpiredIdempotencyKeys(ctx context.Context) error
+	DeletePagoCaja(ctx context.Context, id int64) error
 	ExistsCorreo(ctx context.Context, lower string) (bool, error)
+	ExistsCuadreCerradoBySedeFecha(ctx context.Context, arg ExistsCuadreCerradoBySedeFechaParams) (bool, error)
 	ExistsFraganciaNombreComercial(ctx context.Context, arg ExistsFraganciaNombreComercialParams) (bool, error)
 	ExistsMetodoPagoCodigo(ctx context.Context, arg ExistsMetodoPagoCodigoParams) (bool, error)
 	ExistsMetodoPagoNombre(ctx context.Context, arg ExistsMetodoPagoNombreParams) (bool, error)
 	ExistsModeloEnvaseTipoTamano(ctx context.Context, arg ExistsModeloEnvaseTipoTamanoParams) (bool, error)
 	ExistsProductoNombreCategoria(ctx context.Context, arg ExistsProductoNombreCategoriaParams) (bool, error)
 	ExistsVarianteEnvaseColor(ctx context.Context, arg ExistsVarianteEnvaseColorParams) (bool, error)
+	GetConsignacionByID(ctx context.Context, id int64) (Consignacione, error)
+	GetConsignacionesByCuadre(ctx context.Context, cuadreCajaID int64) ([]GetConsignacionesByCuadreRow, error)
+	// Most recent still-open cuadre strictly before fecha, for the "opened a
+	// new day while yesterday's is still open" soft warning.
+	GetCuadreAbiertoAnterior(ctx context.Context, arg GetCuadreAbiertoAnteriorParams) (CuadresCaja, error)
+	GetCuadreByID(ctx context.Context, id int64) (GetCuadreByIDRow, error)
+	GetCuadreBySedeFecha(ctx context.Context, arg GetCuadreBySedeFechaParams) (GetCuadreBySedeFechaRow, error)
 	GetFraganciaByID(ctx context.Context, id int64) (GetFraganciaByIDRow, error)
 	GetFraganciaByIDIncludingDeleted(ctx context.Context, id int64) (Fragancia, error)
 	GetIdempotencyKey(ctx context.Context, key string) (IdempotencyKey, error)
@@ -57,11 +74,16 @@ type Querier interface {
 	GetMetodoPagoByIDIncludingDeleted(ctx context.Context, id int64) (MetodosPago, error)
 	GetModeloEnvaseByID(ctx context.Context, id int64) (GetModeloEnvaseByIDRow, error)
 	GetModeloEnvaseByIDIncludingDeleted(ctx context.Context, id int64) (ModelosEnvase, error)
+	GetPagoByID(ctx context.Context, id int64) (PagosCaja, error)
+	GetPagosByCuadre(ctx context.Context, cuadreCajaID int64) ([]GetPagosByCuadreRow, error)
 	GetPasswordResetByHash(ctx context.Context, tokenHash string) (PasswordReset, error)
 	GetProductoByID(ctx context.Context, id int64) (GetProductoByIDRow, error)
 	GetProductoByIDIncludingDeleted(ctx context.Context, id int64) (Producto, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
+	GetResumenSesiones(ctx context.Context, arg GetResumenSesionesParams) ([]GetResumenSesionesRow, error)
 	GetResumenVentasHoy(ctx context.Context, arg GetResumenVentasHoyParams) (GetResumenVentasHoyRow, error)
+	GetSesionAbiertaPorUsuario(ctx context.Context, usuarioID int64) (SesionesLaborale, error)
+	GetSesionByID(ctx context.Context, id int64) (GetSesionByIDRow, error)
 	// Locks the row for the duration of the caller's transaction so concurrent
 	// movimientos against the same (sede, tipo_item, item, ubicacion) serialize
 	// instead of racing. Relies on InitializeStock having already created the
@@ -69,6 +91,9 @@ type Querier interface {
 	GetStockActualForUpdate(ctx context.Context, arg GetStockActualForUpdateParams) (StockActual, error)
 	GetStockTotalByItem(ctx context.Context, arg GetStockTotalByItemParams) (GetStockTotalByItemRow, error)
 	GetTopFraganciasHoy(ctx context.Context, arg GetTopFraganciasHoyParams) ([]GetTopFraganciasHoyRow, error)
+	GetTotalConsignacionesByCuadre(ctx context.Context, cuadreCajaID int64) (decimal.Decimal, error)
+	GetTotalPagosByCuadre(ctx context.Context, cuadreCajaID int64) (decimal.Decimal, error)
+	GetTotalesPorMetodoEnFecha(ctx context.Context, arg GetTotalesPorMetodoEnFechaParams) (GetTotalesPorMetodoEnFechaRow, error)
 	GetUsuarioByCorreo(ctx context.Context, lower string) (Usuario, error)
 	GetUsuarioByID(ctx context.Context, id int64) (Usuario, error)
 	GetVarianteEnvaseByID(ctx context.Context, id int64) (GetVarianteEnvaseByIDRow, error)
@@ -78,24 +103,30 @@ type Querier interface {
 	GetVentasPorVendedoraHoy(ctx context.Context, arg GetVentasPorVendedoraHoyParams) ([]GetVentasPorVendedoraHoyRow, error)
 	HardDeleteMetodoPago(ctx context.Context, id int64) error
 	InsertAuditoria(ctx context.Context, arg InsertAuditoriaParams) error
+	InsertConsignacion(ctx context.Context, arg InsertConsignacionParams) (Consignacione, error)
+	InsertCuadre(ctx context.Context, arg InsertCuadreParams) (CuadresCaja, error)
 	InsertFragancia(ctx context.Context, arg InsertFraganciaParams) (Fragancia, error)
 	InsertIdempotencyKey(ctx context.Context, arg InsertIdempotencyKeyParams) error
 	InsertMetodoPago(ctx context.Context, arg InsertMetodoPagoParams) (MetodosPago, error)
 	InsertModeloEnvase(ctx context.Context, arg InsertModeloEnvaseParams) (ModelosEnvase, error)
 	InsertMovimiento(ctx context.Context, arg InsertMovimientoParams) (MovimientosInventario, error)
+	InsertPagoCaja(ctx context.Context, arg InsertPagoCajaParams) (PagosCaja, error)
 	InsertPasswordReset(ctx context.Context, arg InsertPasswordResetParams) (PasswordReset, error)
 	InsertProducto(ctx context.Context, arg InsertProductoParams) (Producto, error)
 	InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) (RefreshToken, error)
+	InsertSesion(ctx context.Context, arg InsertSesionParams) (SesionesLaborale, error)
 	InsertStockActual(ctx context.Context, arg InsertStockActualParams) error
 	InsertUsuario(ctx context.Context, arg InsertUsuarioParams) (Usuario, error)
 	InsertVarianteEnvase(ctx context.Context, arg InsertVarianteEnvaseParams) (VariantesEnvase, error)
 	InsertVenta(ctx context.Context, arg InsertVentaParams) (Venta, error)
 	InsertVentaItem(ctx context.Context, arg InsertVentaItemParams) (VentaItem, error)
+	ListCuadresPaginated(ctx context.Context, arg ListCuadresPaginatedParams) ([]ListCuadresPaginatedRow, error)
 	ListFraganciasPaginated(ctx context.Context, arg ListFraganciasPaginatedParams) ([]ListFraganciasPaginatedRow, error)
 	ListMetodosPagoPaginated(ctx context.Context, arg ListMetodosPagoPaginatedParams) ([]MetodosPago, error)
 	ListModelosEnvasePaginated(ctx context.Context, arg ListModelosEnvasePaginatedParams) ([]ListModelosEnvasePaginatedRow, error)
 	ListMovimientosPaginated(ctx context.Context, arg ListMovimientosPaginatedParams) ([]ListMovimientosPaginatedRow, error)
 	ListProductosPaginated(ctx context.Context, arg ListProductosPaginatedParams) ([]ListProductosPaginatedRow, error)
+	ListSesiones(ctx context.Context, arg ListSesionesParams) ([]ListSesionesRow, error)
 	ListStockUnificado(ctx context.Context, arg ListStockUnificadoParams) ([]ListStockUnificadoRow, error)
 	ListUsuariosPaginated(ctx context.Context, arg ListUsuariosPaginatedParams) ([]Usuario, error)
 	ListVariantesEnvasePaginated(ctx context.Context, arg ListVariantesEnvasePaginatedParams) ([]ListVariantesEnvasePaginatedRow, error)
@@ -110,12 +141,14 @@ type Querier interface {
 	SoftDeleteProducto(ctx context.Context, id int64) error
 	SoftDeleteUsuario(ctx context.Context, id int64) error
 	SoftDeleteVarianteEnvase(ctx context.Context, id int64) error
+	UpdateCuadreCerrar(ctx context.Context, arg UpdateCuadreCerrarParams) (CuadresCaja, error)
 	UpdateFragancia(ctx context.Context, arg UpdateFraganciaParams) (Fragancia, error)
 	UpdateLastLogin(ctx context.Context, id int64) error
 	UpdateMetodoPago(ctx context.Context, arg UpdateMetodoPagoParams) (MetodosPago, error)
 	UpdateModeloEnvase(ctx context.Context, arg UpdateModeloEnvaseParams) (ModelosEnvase, error)
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error
 	UpdateProducto(ctx context.Context, arg UpdateProductoParams) (Producto, error)
+	UpdateSesionManual(ctx context.Context, arg UpdateSesionManualParams) (SesionesLaborale, error)
 	UpdateUsuario(ctx context.Context, arg UpdateUsuarioParams) (Usuario, error)
 	UpdateVarianteEnvase(ctx context.Context, arg UpdateVarianteEnvaseParams) (VariantesEnvase, error)
 	UpdateVentaObservaciones(ctx context.Context, arg UpdateVentaObservacionesParams) (Venta, error)

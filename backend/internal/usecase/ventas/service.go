@@ -25,6 +25,7 @@ import (
 	variantesenvaserepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/variantes_envase"
 	ventaitemsrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/venta_items"
 	ventasrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/ventas"
+	usecasecuadres "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/cuadres"
 	usecasemovimientos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/movimientos"
 )
 
@@ -49,6 +50,7 @@ type Service struct {
 	Auditoria       auditoria.Repository
 	Pricing         domainventas.PricingService
 	Discount        domainventas.DiscountService
+	CajaStatus      usecasecuadres.CajaStatusService
 	Location        *time.Location
 }
 
@@ -70,6 +72,7 @@ func NewService(
 	auditoriaRepo auditoria.Repository,
 	pricing domainventas.PricingService,
 	discount domainventas.DiscountService,
+	cajaStatus usecasecuadres.CajaStatusService,
 	loc *time.Location,
 ) *Service {
 	return &Service{
@@ -87,6 +90,7 @@ func NewService(
 		Auditoria:       auditoriaRepo,
 		Pricing:         pricing,
 		Discount:        discount,
+		CajaStatus:      cajaStatus,
 		Location:        loc,
 	}
 }

@@ -97,6 +97,40 @@ func Int4(v *int32) pgtype.Int4 {
 	return pgtype.Int4{Int32: *v, Valid: true}
 }
 
+// Date converts a time.Time's calendar date (year/month/day, ignoring
+// time-of-day and location) into a valid pgtype.Date.
+func Date(t time.Time) pgtype.Date {
+	return pgtype.Date{Time: time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), Valid: true}
+}
+
+// DatePtr converts *time.Time into a nullable pgtype.Date: nil maps to NULL.
+func DatePtr(t *time.Time) pgtype.Date {
+	if t == nil {
+		return pgtype.Date{}
+	}
+	return Date(*t)
+}
+
+// DateString formats a pgtype.Date as "YYYY-MM-DD", empty when NULL.
+func DateString(d pgtype.Date) string {
+	if !d.Valid {
+		return ""
+	}
+	return d.Time.Format("2006-01-02")
+}
+
+// IntervalToDuration converts a pgtype.Interval into *time.Duration, nil
+// when NULL. Only Days and Microseconds are used: every INTERVAL this
+// project reads back was computed in SQL as one timestamptz minus another
+// (never constructed with a month component), so Months is always 0.
+func IntervalToDuration(iv pgtype.Interval) *time.Duration {
+	if !iv.Valid {
+		return nil
+	}
+	d := time.Duration(iv.Days)*24*time.Hour + time.Duration(iv.Microseconds)*time.Microsecond
+	return &d
+}
+
 // NullDecimal converts *decimal.Decimal into a nullable decimal.NullDecimal.
 func NullDecimal(v *decimal.Decimal) decimal.NullDecimal {
 	if v == nil {

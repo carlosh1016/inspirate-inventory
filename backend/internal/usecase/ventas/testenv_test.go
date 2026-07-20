@@ -18,6 +18,7 @@ import (
 	variantesenvaserepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/variantes_envase"
 	ventaitemsrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/venta_items"
 	ventasrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/ventas"
+	usecasecuadres "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/cuadres"
 	usecasemovimientos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/movimientos"
 	usecaseventas "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/ventas"
 )
@@ -25,10 +26,25 @@ import (
 type testEnv struct {
 	pool         *pgxpool.Pool
 	service      *usecaseventas.Service
+	cajaStatus   *mockCajaStatusService
 	sedeID       int64
 	adminID      int64
 	vendedoraID  int64
 	metodoPagoID int64
+}
+
+// mockCajaStatusService is a stand-in for usecase/cuadres.CajaStatusService
+// so ventas tests don't need a real cuadres_caja row: Err is nil by
+// default (venta always allowed), and tests that need to exercise the
+// block set it to a *domainerrors.DomainError before calling CreateVenta.
+type mockCajaStatusService struct {
+	Err error
+}
+
+var _ usecasecuadres.CajaStatusService = (*mockCajaStatusService)(nil)
+
+func (m *mockCajaStatusService) VerificarPuedeRegistrarVenta(context.Context, int64, time.Time) error {
+	return m.Err
 }
 
 func newTestEnv(t *testing.T) *testEnv {
@@ -66,6 +82,8 @@ func newTestEnv(t *testing.T) *testEnv {
 		pool, movimientosRepo, stockActualRepo, fraganciasRepo, variantesEnvaseRepo, productosRepo, auditoriaRepo,
 	)
 
+	cajaStatus := &mockCajaStatusService{}
+
 	service := usecaseventas.NewService(
 		pool,
 		ventasrepo.NewPostgres(pool),
@@ -81,11 +99,12 @@ func newTestEnv(t *testing.T) *testEnv {
 		auditoriaRepo,
 		usecaseventas.NewPricingService(),
 		usecaseventas.NewDiscountService(),
+		cajaStatus,
 		loc,
 	)
 
 	return &testEnv{
-		pool: pool, service: service, sedeID: sedeID,
+		pool: pool, service: service, cajaStatus: cajaStatus, sedeID: sedeID,
 		adminID: adminID, vendedoraID: vendedoraID, metodoPagoID: metodoPagoID,
 	}
 }

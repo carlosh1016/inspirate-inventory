@@ -3,6 +3,7 @@ package ventas
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/shopspring/decimal"
@@ -222,11 +223,14 @@ type lineResult struct {
 
 // createVentaTx runs entirely inside tx: loads every referenced catalog
 // entity, prices each line, applies the discount, consolidates stock
-// outflows, inserts the venta + its items, registers the resulting
-// movimientos via s.Movimientos.RegisterBatchTx, and — if IdempotencyKey is
-// set — stores the response snapshot. Returns the new venta's ID.
+// outflows, inserts the venta + its items, and registers the resulting
+// movimientos via s.Movimientos.RegisterBatchTx. Returns the new venta's ID.
 func (s *Service) createVentaTx(ctx context.Context, tx pgx.Tx, in CreateVentaInput) (int64, error) {
-	// TODO(cuadre): validar que el cuadre del día no esté cerrado (Tanda 5+).
+	now := time.Now().In(s.Location)
+	hoy := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, s.Location)
+	if err := s.CajaStatus.VerificarPuedeRegistrarVenta(ctx, in.SedeID, hoy); err != nil {
+		return 0, err
+	}
 
 	loader := newEntityLoader(tx)
 

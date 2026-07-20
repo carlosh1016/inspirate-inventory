@@ -17,11 +17,13 @@ import (
 
 	apphttp "github.com/carlosh1016/inspirate-inventory/backend/internal/http"
 	authhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auth"
+	cuadreshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/cuadres"
 	fraganciashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/fragancias"
 	metodospagohandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/metodos_pago"
 	modelosenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/modelos_envase"
 	movimientoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/movimientos"
 	productoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/productos"
+	sesioneshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/sesiones"
 	stockhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/stock"
 	usuarioshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/usuarios"
 	variantesenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/variantes_envase"
@@ -34,25 +36,31 @@ import (
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/ratelimit"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/validator"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/auditoria"
+	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/consignaciones"
+	cuadresrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/cuadres"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/fragancias"
 	idempotencykeys "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/idempotency_keys"
 	metodospago "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/metodos_pago"
 	modelosenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/modelos_envase"
 	movimientos "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/movimientos"
+	pagoscaja "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/pagos_caja"
 	passwordresets "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/password_resets"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/productos"
 	refreshtokens "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/refresh_tokens"
+	sesionesrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/sesiones"
 	stockactual "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/stock_actual"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/usuarios"
 	variantesenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/variantes_envase"
 	ventaitems "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/venta_items"
 	ventasrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/ventas"
 	usecaseauth "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/auth"
+	usecasecuadres "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/cuadres"
 	usecasefragancias "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/fragancias"
 	usecasemetodospago "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/metodos_pago"
 	usecasemodelosenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/modelos_envase"
 	usecasemovimientos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/movimientos"
 	usecaseproductos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/productos"
+	usecasesesiones "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/sesiones"
 	usecasestock "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/stock"
 	usecaseusuarios "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/usuarios"
 	usecasevariantesenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/variantes_envase"
@@ -84,9 +92,9 @@ func run() error {
 	}
 	defer pool.Close()
 
-	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, idempotencyKeysRepo := buildHandlers(cfg, pool, log)
+	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, idempotencyKeysRepo := buildHandlers(cfg, pool, log)
 
-	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler)
+	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler)
 	server := apphttp.NewServer(cfg.Port, router)
 
 	go runIdempotencyKeyCleanup(ctx, idempotencyKeysRepo, log)
@@ -156,7 +164,7 @@ func resolveBogotaLocation(log *slog.Logger) *time.Location {
 	return loc
 }
 
-func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler, *ventashandlers.Handler, idempotencykeys.Repository) {
+func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler, *ventashandlers.Handler, *cuadreshandlers.Handler, *sesioneshandlers.Handler, idempotencykeys.Repository) {
 	usuariosRepo := usuarios.NewPostgres(pool)
 	refreshTokensRepo := refreshtokens.NewPostgres(pool)
 	passwordResetsRepo := passwordresets.NewPostgres(pool)
@@ -171,6 +179,10 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 	ventasRepo := ventasrepo.NewPostgres(pool)
 	ventaItemsRepo := ventaitems.NewPostgres(pool)
 	idempotencyKeysRepo := idempotencykeys.NewPostgres(pool)
+	cuadresRepo := cuadresrepo.NewPostgres(pool)
+	pagosCajaRepo := pagoscaja.NewPostgres(pool)
+	consignacionesRepo := consignaciones.NewPostgres(pool)
+	sesionesRepo := sesionesrepo.NewPostgres(pool)
 
 	jwtManager := jwt.New(cfg.JWTSecret, cfg.JWTAccessTTL)
 	v := validator.New()
@@ -236,9 +248,16 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 		auditoriaRepo,
 		usecaseventas.NewPricingService(),
 		usecaseventas.NewDiscountService(),
+		usecasecuadres.NewCajaStatusService(cuadresRepo),
 		resolveBogotaLocation(log),
 	)
 	ventasHandler := ventashandlers.NewHandler(ventasService, jwtManager, v)
 
-	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, idempotencyKeysRepo
+	cuadresService := usecasecuadres.NewService(pool, cuadresRepo, pagosCajaRepo, consignacionesRepo, usuariosRepo, auditoriaRepo, resolveBogotaLocation(log))
+	cuadresHandler := cuadreshandlers.NewHandler(cuadresService, jwtManager, v)
+
+	sesionesService := usecasesesiones.NewService(sesionesRepo, usuariosRepo, auditoriaRepo, resolveBogotaLocation(log))
+	sesionesHandler := sesioneshandlers.NewHandler(sesionesService, jwtManager, v)
+
+	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, idempotencyKeysRepo
 }
