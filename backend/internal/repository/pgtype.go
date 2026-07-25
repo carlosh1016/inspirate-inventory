@@ -48,6 +48,16 @@ func InetPtr(ip string) *netip.Addr {
 	return &addr
 }
 
+// InetString converts a nullable INET (*netip.Addr) read from the DB into
+// *string, nil when NULL. The inverse of InetPtr.
+func InetString(addr *netip.Addr) *string {
+	if addr == nil || !addr.IsValid() {
+		return nil
+	}
+	s := addr.String()
+	return &s
+}
+
 // Text converts s into a nullable pgtype.Text: empty string maps to NULL.
 func Text(s string) pgtype.Text {
 	return pgtype.Text{String: s, Valid: s != ""}

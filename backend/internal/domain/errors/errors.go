@@ -16,6 +16,9 @@ const (
 	CodeBusinessRule Code = "business_rule_violation"
 	CodeInternal     Code = "internal_error"
 	CodeRateLimit    Code = "rate_limited"
+	// CodeGatewayTimeout signals that a server-side operation (e.g. building a
+	// report) exceeded its time budget and was cancelled.
+	CodeGatewayTimeout Code = "gateway_timeout"
 )
 
 // DomainError is the only error type usecases should return for expected,
@@ -78,6 +81,12 @@ func NewForbidden(title, detail string) *DomainError {
 // NewRateLimit reports that the caller exceeded a rate limit.
 func NewRateLimit(title, detail string) *DomainError {
 	return &DomainError{Code: CodeRateLimit, Title: title, Detail: detail}
+}
+
+// NewGatewayTimeout reports that a server-side operation took too long and was
+// cancelled (e.g. a report whose generation exceeded the allotted time).
+func NewGatewayTimeout(title, detail string) *DomainError {
+	return &DomainError{Code: CodeGatewayTimeout, Title: title, Detail: detail}
 }
 
 // NewInternal wraps an unexpected error. Detail should be a generic Spanish

@@ -185,8 +185,12 @@ func TestUpdateRecalculaHoras(t *testing.T) {
 	env := newTestEnv(t)
 	ctx := context.Background()
 
-	entrada := time.Now().Add(-10 * time.Hour)
-	salida := time.Now().Add(-2 * time.Hour)
+	// Derive both timestamps from a single base so the interval is exactly 8h
+	// (two separate time.Now() calls drift by microseconds, making the
+	// recalculated duration 9h + a few µs and the exact .Hours() == 9 flaky).
+	base := time.Now()
+	entrada := base.Add(-10 * time.Hour)
+	salida := base.Add(-2 * time.Hour)
 	seedSesionCerrada(t, env, env.vendedoraID, entrada, salida)
 
 	sesiones, err := env.service.List(ctx, usecasesesiones.ListInput{SedeID: env.sedeID})

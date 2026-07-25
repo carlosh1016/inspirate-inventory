@@ -12,6 +12,102 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countAuditoria = `-- name: CountAuditoria :one
+SELECT COUNT(*) FROM auditoria a
+WHERE
+    ($1::bigint = 0 OR a.usuario_id = $1)
+    AND ($2::text = '' OR a.accion = $2)
+    AND ($3::text = '' OR a.tabla_afectada = $3)
+    AND ($4::timestamptz IS NULL OR a.created_at >= $4)
+    AND ($5::timestamptz IS NULL OR a.created_at <= $5)
+`
+
+type CountAuditoriaParams struct {
+	UsuarioID     int64              `json:"usuario_id"`
+	Accion        string             `json:"accion"`
+	TablaAfectada string             `json:"tabla_afectada"`
+	FechaDesde    pgtype.Timestamptz `json:"fecha_desde"`
+	FechaHasta    pgtype.Timestamptz `json:"fecha_hasta"`
+}
+
+// Espejo exacto de los filtros de ListAuditoriaPaginated.
+func (q *Queries) CountAuditoria(ctx context.Context, arg CountAuditoriaParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAuditoria,
+		arg.UsuarioID,
+		arg.Accion,
+		arg.TablaAfectada,
+		arg.FechaDesde,
+		arg.FechaHasta,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getAccionesDistintas = `-- name: GetAccionesDistintas :many
+SELECT DISTINCT accion FROM auditoria ORDER BY accion ASC
+`
+
+func (q *Queries) GetAccionesDistintas(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, getAccionesDistintas)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var accion string
+		if err := rows.Scan(&accion); err != nil {
+			return nil, err
+		}
+		items = append(items, accion)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAuditoriaByID = `-- name: GetAuditoriaByID :one
+SELECT a.id, a.usuario_id, a.accion, a.tabla_afectada, a.registro_id, a.datos_antes, a.datos_despues, a.ip, a.user_agent, a.created_at, u.nombre_completo AS usuario_nombre
+FROM auditoria a
+LEFT JOIN usuarios u ON u.id = a.usuario_id
+WHERE a.id = $1
+`
+
+type GetAuditoriaByIDRow struct {
+	ID            int64              `json:"id"`
+	UsuarioID     pgtype.Int8        `json:"usuario_id"`
+	Accion        string             `json:"accion"`
+	TablaAfectada pgtype.Text        `json:"tabla_afectada"`
+	RegistroID    pgtype.Int8        `json:"registro_id"`
+	DatosAntes    []byte             `json:"datos_antes"`
+	DatosDespues  []byte             `json:"datos_despues"`
+	Ip            *netip.Addr        `json:"ip"`
+	UserAgent     pgtype.Text        `json:"user_agent"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UsuarioNombre pgtype.Text        `json:"usuario_nombre"`
+}
+
+func (q *Queries) GetAuditoriaByID(ctx context.Context, id int64) (GetAuditoriaByIDRow, error) {
+	row := q.db.QueryRow(ctx, getAuditoriaByID, id)
+	var i GetAuditoriaByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.UsuarioID,
+		&i.Accion,
+		&i.TablaAfectada,
+		&i.RegistroID,
+		&i.DatosAntes,
+		&i.DatosDespues,
+		&i.Ip,
+		&i.UserAgent,
+		&i.CreatedAt,
+		&i.UsuarioNombre,
+	)
+	return i, err
+}
+
 const insertAuditoria = `-- name: InsertAuditoria :exec
 INSERT INTO auditoria (usuario_id, accion, tabla_afectada, registro_id, datos_antes, datos_despues, ip, user_agent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -40,4 +136,84 @@ func (q *Queries) InsertAuditoria(ctx context.Context, arg InsertAuditoriaParams
 		arg.UserAgent,
 	)
 	return err
+}
+
+const listAuditoriaPaginated = `-- name: ListAuditoriaPaginated :many
+SELECT a.id, a.usuario_id, a.accion, a.tabla_afectada, a.registro_id, a.datos_antes, a.datos_despues, a.ip, a.user_agent, a.created_at, u.nombre_completo AS usuario_nombre
+FROM auditoria a
+LEFT JOIN usuarios u ON u.id = a.usuario_id
+WHERE
+    ($3::bigint = 0 OR a.usuario_id = $3)
+    AND ($4::text = '' OR a.accion = $4)
+    AND ($5::text = '' OR a.tabla_afectada = $5)
+    AND ($6::timestamptz IS NULL OR a.created_at >= $6)
+    AND ($7::timestamptz IS NULL OR a.created_at <= $7)
+ORDER BY a.created_at DESC, a.id DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListAuditoriaPaginatedParams struct {
+	Limit         int32              `json:"limit"`
+	Offset        int32              `json:"offset"`
+	UsuarioID     int64              `json:"usuario_id"`
+	Accion        string             `json:"accion"`
+	TablaAfectada string             `json:"tabla_afectada"`
+	FechaDesde    pgtype.Timestamptz `json:"fecha_desde"`
+	FechaHasta    pgtype.Timestamptz `json:"fecha_hasta"`
+}
+
+type ListAuditoriaPaginatedRow struct {
+	ID            int64              `json:"id"`
+	UsuarioID     pgtype.Int8        `json:"usuario_id"`
+	Accion        string             `json:"accion"`
+	TablaAfectada pgtype.Text        `json:"tabla_afectada"`
+	RegistroID    pgtype.Int8        `json:"registro_id"`
+	DatosAntes    []byte             `json:"datos_antes"`
+	DatosDespues  []byte             `json:"datos_despues"`
+	Ip            *netip.Addr        `json:"ip"`
+	UserAgent     pgtype.Text        `json:"user_agent"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UsuarioNombre pgtype.Text        `json:"usuario_nombre"`
+}
+
+// usuario_nombre viene de un LEFT JOIN (usuario_id puede ser NULL, p.ej. en
+// login_failed sin correo válido) → sqlc lo infiere nullable (pgtype.Text).
+func (q *Queries) ListAuditoriaPaginated(ctx context.Context, arg ListAuditoriaPaginatedParams) ([]ListAuditoriaPaginatedRow, error) {
+	rows, err := q.db.Query(ctx, listAuditoriaPaginated,
+		arg.Limit,
+		arg.Offset,
+		arg.UsuarioID,
+		arg.Accion,
+		arg.TablaAfectada,
+		arg.FechaDesde,
+		arg.FechaHasta,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAuditoriaPaginatedRow{}
+	for rows.Next() {
+		var i ListAuditoriaPaginatedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UsuarioID,
+			&i.Accion,
+			&i.TablaAfectada,
+			&i.RegistroID,
+			&i.DatosAntes,
+			&i.DatosDespues,
+			&i.Ip,
+			&i.UserAgent,
+			&i.CreatedAt,
+			&i.UsuarioNombre,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

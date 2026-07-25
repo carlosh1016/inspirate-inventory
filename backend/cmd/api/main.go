@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	apphttp "github.com/carlosh1016/inspirate-inventory/backend/internal/http"
+	auditoriahandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auditoria"
 	authhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auth"
 	cuadreshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/cuadres"
 	fraganciashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/fragancias"
@@ -23,6 +24,7 @@ import (
 	modelosenvasehandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/modelos_envase"
 	movimientoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/movimientos"
 	productoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/productos"
+	reporteshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/reportes"
 	sesioneshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/sesiones"
 	stockhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/stock"
 	usuarioshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/usuarios"
@@ -47,12 +49,14 @@ import (
 	passwordresets "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/password_resets"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/productos"
 	refreshtokens "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/refresh_tokens"
+	reportesrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/reportes"
 	sesionesrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/sesiones"
 	stockactual "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/stock_actual"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/usuarios"
 	variantesenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/variantes_envase"
 	ventaitems "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/venta_items"
 	ventasrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/ventas"
+	usecaseauditoria "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/auditoria"
 	usecaseauth "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/auth"
 	usecasecuadres "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/cuadres"
 	usecasefragancias "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/fragancias"
@@ -60,6 +64,7 @@ import (
 	usecasemodelosenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/modelos_envase"
 	usecasemovimientos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/movimientos"
 	usecaseproductos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/productos"
+	usecasereportes "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/reportes"
 	usecasesesiones "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/sesiones"
 	usecasestock "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/stock"
 	usecaseusuarios "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/usuarios"
@@ -92,9 +97,9 @@ func run() error {
 	}
 	defer pool.Close()
 
-	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, idempotencyKeysRepo := buildHandlers(cfg, pool, log)
+	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, reportesHandler, auditoriaHandler, idempotencyKeysRepo := buildHandlers(cfg, pool, log)
 
-	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler)
+	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, reportesHandler, auditoriaHandler)
 	server := apphttp.NewServer(cfg.Port, router)
 
 	go runIdempotencyKeyCleanup(ctx, idempotencyKeysRepo, log)
@@ -164,7 +169,7 @@ func resolveBogotaLocation(log *slog.Logger) *time.Location {
 	return loc
 }
 
-func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler, *ventashandlers.Handler, *cuadreshandlers.Handler, *sesioneshandlers.Handler, idempotencykeys.Repository) {
+func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler, *ventashandlers.Handler, *cuadreshandlers.Handler, *sesioneshandlers.Handler, *reporteshandlers.Handler, *auditoriahandlers.Handler, idempotencykeys.Repository) {
 	usuariosRepo := usuarios.NewPostgres(pool)
 	refreshTokensRepo := refreshtokens.NewPostgres(pool)
 	passwordResetsRepo := passwordresets.NewPostgres(pool)
@@ -183,6 +188,7 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 	pagosCajaRepo := pagoscaja.NewPostgres(pool)
 	consignacionesRepo := consignaciones.NewPostgres(pool)
 	sesionesRepo := sesionesrepo.NewPostgres(pool)
+	reportesRepo := reportesrepo.NewPostgres(pool)
 
 	jwtManager := jwt.New(cfg.JWTSecret, cfg.JWTAccessTTL)
 	v := validator.New()
@@ -259,5 +265,11 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 	sesionesService := usecasesesiones.NewService(sesionesRepo, usuariosRepo, auditoriaRepo, resolveBogotaLocation(log))
 	sesionesHandler := sesioneshandlers.NewHandler(sesionesService, jwtManager, v)
 
-	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, idempotencyKeysRepo
+	reportesService := usecasereportes.NewService(reportesRepo, resolveBogotaLocation(log))
+	reportesHandler := reporteshandlers.NewHandler(reportesService, jwtManager, resolveBogotaLocation(log))
+
+	auditoriaService := usecaseauditoria.NewService(auditoriaRepo)
+	auditoriaHandler := auditoriahandlers.NewHandler(auditoriaService, jwtManager)
+
+	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, reportesHandler, auditoriaHandler, idempotencyKeysRepo
 }

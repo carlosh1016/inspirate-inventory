@@ -21,6 +21,8 @@ func StatusForCode(code domainerrors.Code) int {
 		return http.StatusConflict
 	case domainerrors.CodeRateLimit:
 		return http.StatusTooManyRequests
+	case domainerrors.CodeGatewayTimeout:
+		return http.StatusGatewayTimeout
 	default:
 		return http.StatusInternalServerError
 	}

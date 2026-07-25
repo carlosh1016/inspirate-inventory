@@ -14,6 +14,8 @@ type Querier interface {
 	ActivateUsuario(ctx context.Context, id int64) error
 	CerrarSesion(ctx context.Context, arg CerrarSesionParams) (SesionesLaborale, error)
 	CountActiveAdmins(ctx context.Context) (int64, error)
+	// Espejo exacto de los filtros de ListAuditoriaPaginated.
+	CountAuditoria(ctx context.Context, arg CountAuditoriaParams) (int64, error)
 	// Mismos filtros que ListCuadresPaginated (sin joins ni columnas extra).
 	CountCuadres(ctx context.Context, arg CountCuadresParams) (int64, error)
 	// Mirrors ListFraganciasPaginated's GROUP BY/HAVING (stock_bajo needs it),
@@ -60,6 +62,8 @@ type Querier interface {
 	ExistsModeloEnvaseTipoTamano(ctx context.Context, arg ExistsModeloEnvaseTipoTamanoParams) (bool, error)
 	ExistsProductoNombreCategoria(ctx context.Context, arg ExistsProductoNombreCategoriaParams) (bool, error)
 	ExistsVarianteEnvaseColor(ctx context.Context, arg ExistsVarianteEnvaseColorParams) (bool, error)
+	GetAccionesDistintas(ctx context.Context) ([]string, error)
+	GetAuditoriaByID(ctx context.Context, id int64) (GetAuditoriaByIDRow, error)
 	GetConsignacionByID(ctx context.Context, id int64) (Consignacione, error)
 	GetConsignacionesByCuadre(ctx context.Context, cuadreCajaID int64) ([]GetConsignacionesByCuadreRow, error)
 	// Most recent still-open cuadre strictly before fecha, for the "opened a
@@ -120,6 +124,9 @@ type Querier interface {
 	InsertVarianteEnvase(ctx context.Context, arg InsertVarianteEnvaseParams) (VariantesEnvase, error)
 	InsertVenta(ctx context.Context, arg InsertVentaParams) (Venta, error)
 	InsertVentaItem(ctx context.Context, arg InsertVentaItemParams) (VentaItem, error)
+	// usuario_nombre viene de un LEFT JOIN (usuario_id puede ser NULL, p.ej. en
+	// login_failed sin correo válido) → sqlc lo infiere nullable (pgtype.Text).
+	ListAuditoriaPaginated(ctx context.Context, arg ListAuditoriaPaginatedParams) ([]ListAuditoriaPaginatedRow, error)
 	ListCuadresPaginated(ctx context.Context, arg ListCuadresPaginatedParams) ([]ListCuadresPaginatedRow, error)
 	ListFraganciasPaginated(ctx context.Context, arg ListFraganciasPaginatedParams) ([]ListFraganciasPaginatedRow, error)
 	ListMetodosPagoPaginated(ctx context.Context, arg ListMetodosPagoPaginatedParams) ([]MetodosPago, error)
@@ -132,6 +139,54 @@ type Querier interface {
 	ListVariantesEnvasePaginated(ctx context.Context, arg ListVariantesEnvasePaginatedParams) ([]ListVariantesEnvasePaginatedRow, error)
 	ListVentasPaginated(ctx context.Context, arg ListVentasPaginatedParams) ([]ListVentasPaginatedRow, error)
 	MarkPasswordResetUsed(ctx context.Context, id int64) error
+	// ===========================================================================
+	// CUADRES DE CAJA (solo cerrados)
+	// ===========================================================================
+	ReporteCuadresCerrados(ctx context.Context, arg ReporteCuadresCerradosParams) ([]ReporteCuadresCerradosRow, error)
+	ReporteCuadresConsignaciones(ctx context.Context, arg ReporteCuadresConsignacionesParams) ([]ReporteCuadresConsignacionesRow, error)
+	ReporteCuadresPagos(ctx context.Context, arg ReporteCuadresPagosParams) ([]ReporteCuadresPagosRow, error)
+	// ===========================================================================
+	// MOVIMIENTOS
+	// ===========================================================================
+	// Igual a ListMovimientosPaginated pero sin LIMIT/OFFSET (el reporte descarga
+	// todo el rango). Mismos filtros y mismo item_nombre calculado.
+	ReporteMovimientos(ctx context.Context, arg ReporteMovimientosParams) ([]ReporteMovimientosRow, error)
+	ReporteSesionesDetalle(ctx context.Context, arg ReporteSesionesDetalleParams) ([]ReporteSesionesDetalleRow, error)
+	// ===========================================================================
+	// SESIONES LABORALES
+	// ===========================================================================
+	// COALESCE(SUM(interval), INTERVAL '0')::interval: el cast ::interval es
+	// obligatorio o sqlc genera interface{} (lección de Tanda 5). dias_trabajados
+	// cuenta fechas de entrada distintas en zona Colombia.
+	ReporteSesionesResumen(ctx context.Context, arg ReporteSesionesResumenParams) ([]ReporteSesionesResumenRow, error)
+	// Solo items bajo mínimo (total < mínimo). El faltante es mínimo - total. La
+	// columna "Ubicación" del reporte se rellena en Go con "Total" (el mínimo es
+	// un umbral sobre el stock total, no por ubicación).
+	ReporteStockAlertas(ctx context.Context, arg ReporteStockAlertasParams) ([]ReporteStockAlertasRow, error)
+	ReporteStockEnvases(ctx context.Context, arg ReporteStockEnvasesParams) ([]ReporteStockEnvasesRow, error)
+	// ===========================================================================
+	// STOCK (snapshot actual, sin rango)
+	// ===========================================================================
+	ReporteStockFragancias(ctx context.Context, arg ReporteStockFraganciasParams) ([]ReporteStockFraganciasRow, error)
+	ReporteStockProductos(ctx context.Context, arg ReporteStockProductosParams) ([]ReporteStockProductosRow, error)
+	ReporteVentasDetalle(ctx context.Context, arg ReporteVentasDetalleParams) ([]ReporteVentasDetalleRow, error)
+	// Detalle línea a línea. fragancia/producto/feromona son columnas directas de
+	// tablas LEFT-JOIN (sqlc las infiere nullable → pgtype.Text). envase_nombre es
+	// un CONCAT: se envuelve en COALESCE(...,'')::text para evitar el panic de
+	// "scan NULL into string" (sale '' cuando la línea no tiene envase).
+	ReporteVentasItems(ctx context.Context, arg ReporteVentasItemsParams) ([]ReporteVentasItemsRow, error)
+	ReporteVentasPorVendedora(ctx context.Context, arg ReporteVentasPorVendedoraParams) ([]ReporteVentasPorVendedoraRow, error)
+	// Queries dedicadas de agregación pesada para los reportes XLSX (M13).
+	// Todas escopadas por sede_id. Las expresiones computadas/COALESCE llevan
+	// cast explícito ::tipo para no romper la inferencia de sqlc (lección
+	// recurrente: CASE/CONCAT/COALESCE sin cast generan interface{} o tipos no
+	// nulos que panican al escanear NULL).
+	// ===========================================================================
+	// VENTAS
+	// ===========================================================================
+	// Un solo row con los totales globales + el desglose por método de pago,
+	// mismo bucketing que GetResumenVentasHoy pero sobre un rango arbitrario.
+	ReporteVentasResumen(ctx context.Context, arg ReporteVentasResumenParams) (ReporteVentasResumenRow, error)
 	RestoreFragancia(ctx context.Context, id int64) (Fragancia, error)
 	RevokeAllRefreshTokensByUser(ctx context.Context, usuarioID int64) error
 	RevokeRefreshToken(ctx context.Context, id int64) error

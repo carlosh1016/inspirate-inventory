@@ -35,6 +35,8 @@ linters-settings:
       - productos
       - inventario
       - correccion
+      - reporte
+      - reportes
 
 issues:
   exclude-rules:
