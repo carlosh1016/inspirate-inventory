@@ -1,8 +1,21 @@
-export default function Home() {
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+// The root route has no auth context of its own (the access token lives only in
+// the app area's AuthProvider), so it forwards to /dashboard, which validates
+// the session and, if needed, redirects to /login.
+export default function RootPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/dashboard');
+  }, [router]);
+
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-      <h1 className="text-2xl font-semibold">Inspírate Inventory — en construcción</h1>
-      <p className="text-sm text-gray-500">Módulo 0: setup inicial del monorepo.</p>
-    </main>
+    <div className="flex min-h-screen items-center justify-center">
+      <p className="text-sm text-muted-foreground">Cargando...</p>
+    </div>
   );
 }
