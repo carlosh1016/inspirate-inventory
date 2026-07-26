@@ -28,7 +28,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <SidebarItem
             key={item.href}
             item={item}
-            active={pathname === item.href}
+            active={
+              item.href === '/dashboard'
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(`${item.href}/`)
+            }
             onNavigate={onNavigate}
           />
         ))}

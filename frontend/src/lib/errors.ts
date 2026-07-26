@@ -9,7 +9,10 @@ export interface ProblemDetails {
   status: number;
   detail?: string;
   instance?: string;
-  extra?: Record<string, unknown>;
+  // `extra` is an arbitrary error-specific payload. Its shape depends on the
+  // error: for "stock insuficiente" it's an array of StockInsuficienteItem
+  // (see features/movimientos), so it's typed `unknown` and narrowed at use.
+  extra?: unknown;
   errors?: Record<string, string[]>;
 }
 

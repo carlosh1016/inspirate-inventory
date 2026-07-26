@@ -27,11 +27,11 @@ export const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin'] },
   { href: '/nueva-venta', label: 'Nueva venta', icon: ShoppingCart, roles: ['admin', 'vendedora'], disabled: true },
   { href: '/mi-turno', label: 'Mi turno', icon: Clock, roles: ['vendedora'], disabled: true },
-  { href: '/inventario', label: 'Inventario', icon: Package, roles: ['admin', 'vendedora'], disabled: true },
+  { href: '/inventario', label: 'Inventario', icon: Package, roles: ['admin', 'vendedora'] },
   { href: '/ventas', label: 'Ventas', icon: ShoppingCart, roles: ['admin', 'vendedora'], disabled: true },
   { href: '/caja', label: 'Caja', icon: Wallet, roles: ['admin', 'vendedora'], disabled: true },
   { href: '/usuarios', label: 'Usuarios', icon: Users, roles: ['admin'], disabled: true },
   { href: '/reportes', label: 'Reportes', icon: FileText, roles: ['admin'], disabled: true },
   { href: '/auditoria', label: 'Auditoría', icon: ShieldCheck, roles: ['admin'], disabled: true },
-  { href: '/configuracion', label: 'Configuración', icon: Settings, roles: ['admin'], disabled: true },
+  { href: '/configuracion', label: 'Configuración', icon: Settings, roles: ['admin'] },
 ];

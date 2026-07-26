@@ -3,6 +3,18 @@
 
 export type Rol = 'admin' | 'vendedora';
 
+export type Genero = 'masculina' | 'femenina';
+export type CategoriaProducto = 'crema' | 'feromona' | 'hogar' | 'regalo' | 'otro';
+export type TipoItem = 'fragancia' | 'variante_envase' | 'producto';
+export type Ubicacion = 'vitrina' | 'bodega';
+
+/** vitrina/bodega/total stock snapshot (decimal strings) shared by catalog items. */
+export interface StockSnapshot {
+  vitrina: string;
+  bodega: string;
+  total: string;
+}
+
 /** The authenticated user kept in the auth store. */
 export interface UsuarioSession {
   id: number;
