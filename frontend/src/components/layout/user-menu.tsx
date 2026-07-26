@@ -8,7 +8,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -49,12 +48,10 @@ export function UserMenu() {
         <span className="hidden md:inline">{usuario.nombre_completo}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">{usuario.nombre_completo}</span>
-            <span className="text-xs text-muted-foreground capitalize">{usuario.rol}</span>
-          </div>
-        </DropdownMenuLabel>
+        <div className="px-2 py-1.5">
+          <p className="text-sm font-medium">{usuario.nombre_completo}</p>
+          <p className="text-xs text-muted-foreground capitalize">{usuario.rol}</p>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
           <User size={16} />
