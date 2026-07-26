@@ -17,7 +17,7 @@ interface Props<O extends ComboboxOption> {
   value: number | null;
   /** Label of the current selection, shown on the trigger. */
   selectedLabel?: string | null;
-  onChange: (id: number | null, label: string | null) => void;
+  onChange: (id: number | null, label: string | null, option: O | null) => void;
   searchFn: (query: string) => Promise<O[]>;
   placeholder?: string;
   renderOption?: (option: O) => React.ReactNode;
@@ -83,7 +83,7 @@ export function Combobox<O extends ComboboxOption>({
   };
 
   const handleSelect = (option: O) => {
-    onChange(option.id, option.label);
+    onChange(option.id, option.label, option);
     setOpen(false);
     setQuery('');
   };
@@ -106,7 +106,7 @@ export function Combobox<O extends ComboboxOption>({
               className="size-3.5 text-muted-foreground hover:text-foreground"
               onClick={(e) => {
                 e.stopPropagation();
-                onChange(null, null);
+                onChange(null, null, null);
               }}
             />
           )}

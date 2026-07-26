@@ -33,6 +33,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 ? pathname === item.href
                 : pathname === item.href || pathname.startsWith(`${item.href}/`)
             }
+            highlight={usuario.rol === 'vendedora' && item.href === '/nueva-venta'}
             onNavigate={onNavigate}
           />
         ))}
