@@ -30,7 +30,7 @@ export const navItems: NavItem[] = [
   { href: '/inventario', label: 'Inventario', icon: Package, roles: ['admin', 'vendedora'] },
   { href: '/ventas', label: 'Ventas', icon: ShoppingCart, roles: ['admin', 'vendedora'] },
   { href: '/caja', label: 'Caja', icon: Wallet, roles: ['admin', 'vendedora'] },
-  { href: '/usuarios', label: 'Usuarios', icon: Users, roles: ['admin'], disabled: true },
+  { href: '/usuarios', label: 'Usuarios', icon: Users, roles: ['admin'] },
   { href: '/reportes', label: 'Reportes', icon: FileText, roles: ['admin'], disabled: true },
   { href: '/auditoria', label: 'Auditoría', icon: ShieldCheck, roles: ['admin'], disabled: true },
   { href: '/configuracion', label: 'Configuración', icon: Settings, roles: ['admin'] },
