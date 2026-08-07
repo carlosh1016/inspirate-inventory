@@ -1,0 +1,20 @@
+[Unit]
+Description=Inspirate Inventory Backend
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/inspirate
+ExecStart=/opt/inspirate/server
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=inspirate
+
+# Variables de entorno de produccion
+EnvironmentFile=/opt/inspirate/.env
+
+[Install]
+WantedBy=multi-user.target

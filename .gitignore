@@ -1,5 +1,6 @@
 # --- Go (backend) ---
-backend/bin/
+backend/bin/*
+!backend/bin/.gitkeep
 backend/api
 backend/*.exe
 backend/coverage.out

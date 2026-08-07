@@ -1,0 +1,11 @@
+# Reemplazar tu-dominio.com con el dominio real
+# Si no tienes dominio, usar la IP publica de Oracle y comentar la linea de dominio
+
+tu-dominio.com {
+    reverse_proxy localhost:8080
+}
+
+# Alternativa sin dominio (solo para pruebas):
+# :80 {
+#     reverse_proxy localhost:8080
+# }
