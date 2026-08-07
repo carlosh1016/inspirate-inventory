@@ -85,7 +85,7 @@ Contenido (reemplazar los valores reales — ver `backend/.env.example` para la 
 de variables que lee `internal/platform/config/config.go`; `DATABASE_URL` y `JWT_SECRET` son
 obligatorias, el resto tiene defaults razonables):
 ```bash
-DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
 JWT_SECRET=<string-aleatorio-min-32-chars-genera-con: openssl rand -base64 32>
 PORT=8080
 ENVIRONMENT=production
@@ -95,9 +95,17 @@ CORS_ALLOWED_ORIGINS=https://<tu-app>.vercel.app
 ```
 
 **Sobre DATABASE_URL de Supabase:**
-- Ve a Supabase → Project Settings → Database → Connection string
-- Usar **Transaction mode** (puerto 6543) para el servidor en produccion
-- Usar **Session mode** (puerto 5432) solo para correr migraciones con goose
+- Ve a Supabase → Project Settings → Database → Connection string → **Session pooler** (puerto 5432)
+- Usar **Session mode** (5432), no Transaction mode (6543), para todo: la app y `goose`.
+  El backend ya mantiene su propio pool de conexiones persistente (`internal/platform/db/db.go`,
+  `pgxpool` con 2-20 conexiones) — el Transaction pooler de Supabase (PgBouncer en modo
+  transacción) rompe los *prepared statements* que pgx usa por defecto, causando errores
+  intermitentes tipo `prepared statement already exists`. Session mode mantiene una sesión
+  estable por conexión y es compatible con IPv4 (la conexión "Direct" de Supabase es
+  IPv6-only y puede no ser alcanzable desde la VM de Oracle).
+- Agregar `?sslmode=require` explícito — Supabase exige TLS.
+- Si mas adelante ves errores de "too many connections", revisa el límite de pool en
+  Supabase → Database → Connection Pooling antes de subir `MaxConns` en el código.
 
 Proteger el archivo:
 ```bash
@@ -135,8 +143,8 @@ sudo systemctl start inspirate
 
 ### 3.3 Aplicar migraciones (desde tu maquina local, una sola vez)
 ```bash
-# Usar Session mode de Supabase (puerto 5432) para goose
-DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-us-east-1.pooler.supabase.com:5432/postgres" \
+# Mismo connection string (Session pooler, 5432) que usa la app en el .env de la VM
+DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require" \
   goose -dir backend/db/migrations postgres up
 ```
 
