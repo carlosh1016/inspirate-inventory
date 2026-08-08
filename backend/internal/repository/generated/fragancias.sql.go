@@ -21,11 +21,12 @@ SELECT COUNT(*) FROM (
     ($1::bool OR f.deleted_at IS NULL)
     AND ($2::bigint = 0 OR f.sede_id = $2)
     AND ($3::text = '' OR f.genero::text = $3)
-    AND ($4::text = 'all' OR ($4::text = 'true' AND f.activo = true) OR ($4::text = 'false' AND f.activo = false))
-    AND ($5::text = '' OR f.nombre_comercial ILIKE '%' || $5 || '%' OR f.nombre_alternativo ILIKE '%' || $5 || '%')
+    AND ($4::int = 0 OR f.numero_genero = $4)
+    AND ($5::text = 'all' OR ($5::text = 'true' AND f.activo = true) OR ($5::text = 'false' AND f.activo = false))
+    AND ($6::text = '' OR f.nombre_comercial ILIKE '%' || $6 || '%' OR f.nombre_alternativo ILIKE '%' || $6 || '%')
   GROUP BY f.id
   HAVING
-    NOT $6::bool OR (
+    NOT $7::bool OR (
       COALESCE(SUM(CASE WHEN sa.ubicacion = 'vitrina' THEN sa.cantidad ELSE 0 END), 0)
       + COALESCE(SUM(CASE WHEN sa.ubicacion = 'bodega' THEN sa.cantidad ELSE 0 END), 0)
       < f.gramos_minimo
@@ -37,6 +38,7 @@ type CountFraganciasParams struct {
 	IncludeDeleted bool   `json:"include_deleted"`
 	SedeID         int64  `json:"sede_id"`
 	Genero         string `json:"genero"`
+	NumeroGenero   int32  `json:"numero_genero"`
 	Activo         string `json:"activo"`
 	Q              string `json:"q"`
 	StockBajo      bool   `json:"stock_bajo"`
@@ -49,6 +51,7 @@ func (q *Queries) CountFragancias(ctx context.Context, arg CountFraganciasParams
 		arg.IncludeDeleted,
 		arg.SedeID,
 		arg.Genero,
+		arg.NumeroGenero,
 		arg.Activo,
 		arg.Q,
 		arg.StockBajo,
@@ -79,8 +82,35 @@ func (q *Queries) ExistsFraganciaNombreComercial(ctx context.Context, arg Exists
 	return exists, err
 }
 
+const existsFraganciaNumeroGenero = `-- name: ExistsFraganciaNumeroGenero :one
+SELECT EXISTS(
+  SELECT 1 FROM fragancias
+  WHERE sede_id = $1 AND genero = $2 AND numero_genero = $3 AND deleted_at IS NULL
+    AND ($4::bigint = 0 OR id != $4)
+)
+`
+
+type ExistsFraganciaNumeroGeneroParams struct {
+	SedeID       int64      `json:"sede_id"`
+	Genero       GeneroEnum `json:"genero"`
+	NumeroGenero int32      `json:"numero_genero"`
+	ExcludeID    int64      `json:"exclude_id"`
+}
+
+func (q *Queries) ExistsFraganciaNumeroGenero(ctx context.Context, arg ExistsFraganciaNumeroGeneroParams) (bool, error) {
+	row := q.db.QueryRow(ctx, existsFraganciaNumeroGenero,
+		arg.SedeID,
+		arg.Genero,
+		arg.NumeroGenero,
+		arg.ExcludeID,
+	)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getFraganciaByID = `-- name: GetFraganciaByID :one
-SELECT f.id, f.sede_id, f.nombre_comercial, f.nombre_alternativo, f.genero, f.gramos_minimo, f.activo, f.deleted_at, f.created_at, f.updated_at,
+SELECT f.id, f.sede_id, f.nombre_comercial, f.nombre_alternativo, f.genero, f.gramos_minimo, f.activo, f.deleted_at, f.created_at, f.updated_at, f.numero_genero,
   COALESCE(SUM(CASE WHEN sa.ubicacion = 'vitrina' THEN sa.cantidad ELSE 0 END), 0)::numeric AS stock_vitrina,
   COALESCE(SUM(CASE WHEN sa.ubicacion = 'bodega' THEN sa.cantidad ELSE 0 END), 0)::numeric AS stock_bodega
 FROM fragancias f
@@ -100,6 +130,7 @@ type GetFraganciaByIDRow struct {
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	NumeroGenero      int32              `json:"numero_genero"`
 	StockVitrina      decimal.Decimal    `json:"stock_vitrina"`
 	StockBodega       decimal.Decimal    `json:"stock_bodega"`
 }
@@ -118,6 +149,7 @@ func (q *Queries) GetFraganciaByID(ctx context.Context, id int64) (GetFraganciaB
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumeroGenero,
 		&i.StockVitrina,
 		&i.StockBodega,
 	)
@@ -125,7 +157,7 @@ func (q *Queries) GetFraganciaByID(ctx context.Context, id int64) (GetFraganciaB
 }
 
 const getFraganciaByIDIncludingDeleted = `-- name: GetFraganciaByIDIncludingDeleted :one
-SELECT id, sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, activo, deleted_at, created_at, updated_at FROM fragancias WHERE id = $1
+SELECT id, sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, activo, deleted_at, created_at, updated_at, numero_genero FROM fragancias WHERE id = $1
 `
 
 func (q *Queries) GetFraganciaByIDIncludingDeleted(ctx context.Context, id int64) (Fragancia, error) {
@@ -142,14 +174,15 @@ func (q *Queries) GetFraganciaByIDIncludingDeleted(ctx context.Context, id int64
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumeroGenero,
 	)
 	return i, err
 }
 
 const insertFragancia = `-- name: InsertFragancia :one
-INSERT INTO fragancias (sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, activo, deleted_at, created_at, updated_at
+INSERT INTO fragancias (sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, numero_genero)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, activo, deleted_at, created_at, updated_at, numero_genero
 `
 
 type InsertFraganciaParams struct {
@@ -158,6 +191,7 @@ type InsertFraganciaParams struct {
 	NombreAlternativo pgtype.Text     `json:"nombre_alternativo"`
 	Genero            GeneroEnum      `json:"genero"`
 	GramosMinimo      decimal.Decimal `json:"gramos_minimo"`
+	NumeroGenero      int32           `json:"numero_genero"`
 }
 
 func (q *Queries) InsertFragancia(ctx context.Context, arg InsertFraganciaParams) (Fragancia, error) {
@@ -167,6 +201,7 @@ func (q *Queries) InsertFragancia(ctx context.Context, arg InsertFraganciaParams
 		arg.NombreAlternativo,
 		arg.Genero,
 		arg.GramosMinimo,
+		arg.NumeroGenero,
 	)
 	var i Fragancia
 	err := row.Scan(
@@ -180,12 +215,13 @@ func (q *Queries) InsertFragancia(ctx context.Context, arg InsertFraganciaParams
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumeroGenero,
 	)
 	return i, err
 }
 
 const listFraganciasPaginated = `-- name: ListFraganciasPaginated :many
-SELECT f.id, f.sede_id, f.nombre_comercial, f.nombre_alternativo, f.genero, f.gramos_minimo, f.activo, f.deleted_at, f.created_at, f.updated_at,
+SELECT f.id, f.sede_id, f.nombre_comercial, f.nombre_alternativo, f.genero, f.gramos_minimo, f.activo, f.deleted_at, f.created_at, f.updated_at, f.numero_genero,
   COALESCE(SUM(CASE WHEN sa.ubicacion = 'vitrina' THEN sa.cantidad ELSE 0 END), 0)::numeric AS stock_vitrina,
   COALESCE(SUM(CASE WHEN sa.ubicacion = 'bodega' THEN sa.cantidad ELSE 0 END), 0)::numeric AS stock_bodega
 FROM fragancias f
@@ -194,20 +230,21 @@ WHERE
   ($3::bool OR f.deleted_at IS NULL)
   AND ($4::bigint = 0 OR f.sede_id = $4)
   AND ($5::text = '' OR f.genero::text = $5)
-  AND ($6::text = 'all' OR ($6::text = 'true' AND f.activo = true) OR ($6::text = 'false' AND f.activo = false))
-  AND ($7::text = '' OR f.nombre_comercial ILIKE '%' || $7 || '%' OR f.nombre_alternativo ILIKE '%' || $7 || '%')
+  AND ($6::int = 0 OR f.numero_genero = $6)
+  AND ($7::text = 'all' OR ($7::text = 'true' AND f.activo = true) OR ($7::text = 'false' AND f.activo = false))
+  AND ($8::text = '' OR f.nombre_comercial ILIKE '%' || $8 || '%' OR f.nombre_alternativo ILIKE '%' || $8 || '%')
 GROUP BY f.id
 HAVING
-  NOT $8::bool OR (
+  NOT $9::bool OR (
     COALESCE(SUM(CASE WHEN sa.ubicacion = 'vitrina' THEN sa.cantidad ELSE 0 END), 0)
     + COALESCE(SUM(CASE WHEN sa.ubicacion = 'bodega' THEN sa.cantidad ELSE 0 END), 0)
     < f.gramos_minimo
   )
 ORDER BY
-  CASE WHEN $9::text = 'nombre_comercial' AND $10::text = 'asc' THEN f.nombre_comercial END ASC,
-  CASE WHEN $9::text = 'nombre_comercial' AND $10::text = 'desc' THEN f.nombre_comercial END DESC,
-  CASE WHEN $9::text = 'created_at' AND $10::text = 'asc' THEN f.created_at END ASC,
-  CASE WHEN $9::text = 'created_at' AND $10::text = 'desc' THEN f.created_at END DESC,
+  CASE WHEN $10::text = 'nombre_comercial' AND $11::text = 'asc' THEN f.nombre_comercial END ASC,
+  CASE WHEN $10::text = 'nombre_comercial' AND $11::text = 'desc' THEN f.nombre_comercial END DESC,
+  CASE WHEN $10::text = 'created_at' AND $11::text = 'asc' THEN f.created_at END ASC,
+  CASE WHEN $10::text = 'created_at' AND $11::text = 'desc' THEN f.created_at END DESC,
   f.id ASC
 LIMIT $1 OFFSET $2
 `
@@ -218,6 +255,7 @@ type ListFraganciasPaginatedParams struct {
 	IncludeDeleted bool   `json:"include_deleted"`
 	SedeID         int64  `json:"sede_id"`
 	Genero         string `json:"genero"`
+	NumeroGenero   int32  `json:"numero_genero"`
 	Activo         string `json:"activo"`
 	Q              string `json:"q"`
 	StockBajo      bool   `json:"stock_bajo"`
@@ -236,6 +274,7 @@ type ListFraganciasPaginatedRow struct {
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	NumeroGenero      int32              `json:"numero_genero"`
 	StockVitrina      decimal.Decimal    `json:"stock_vitrina"`
 	StockBodega       decimal.Decimal    `json:"stock_bodega"`
 }
@@ -247,6 +286,7 @@ func (q *Queries) ListFraganciasPaginated(ctx context.Context, arg ListFragancia
 		arg.IncludeDeleted,
 		arg.SedeID,
 		arg.Genero,
+		arg.NumeroGenero,
 		arg.Activo,
 		arg.Q,
 		arg.StockBajo,
@@ -271,6 +311,7 @@ func (q *Queries) ListFraganciasPaginated(ctx context.Context, arg ListFragancia
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.NumeroGenero,
 			&i.StockVitrina,
 			&i.StockBodega,
 		); err != nil {
@@ -284,10 +325,28 @@ func (q *Queries) ListFraganciasPaginated(ctx context.Context, arg ListFragancia
 	return items, nil
 }
 
+const nextNumeroGeneroFragancia = `-- name: NextNumeroGeneroFragancia :one
+SELECT COALESCE(MAX(numero_genero), 0) + 1 AS siguiente
+FROM fragancias
+WHERE sede_id = $1 AND genero = $2 AND deleted_at IS NULL
+`
+
+type NextNumeroGeneroFraganciaParams struct {
+	SedeID int64      `json:"sede_id"`
+	Genero GeneroEnum `json:"genero"`
+}
+
+func (q *Queries) NextNumeroGeneroFragancia(ctx context.Context, arg NextNumeroGeneroFraganciaParams) (int32, error) {
+	row := q.db.QueryRow(ctx, nextNumeroGeneroFragancia, arg.SedeID, arg.Genero)
+	var siguiente int32
+	err := row.Scan(&siguiente)
+	return siguiente, err
+}
+
 const restoreFragancia = `-- name: RestoreFragancia :one
 UPDATE fragancias SET deleted_at = NULL, activo = true, updated_at = NOW()
 WHERE id = $1 AND deleted_at IS NOT NULL
-RETURNING id, sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, activo, deleted_at, created_at, updated_at
+RETURNING id, sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, activo, deleted_at, created_at, updated_at, numero_genero
 `
 
 func (q *Queries) RestoreFragancia(ctx context.Context, id int64) (Fragancia, error) {
@@ -304,6 +363,7 @@ func (q *Queries) RestoreFragancia(ctx context.Context, id int64) (Fragancia, er
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumeroGenero,
 	)
 	return i, err
 }
@@ -324,9 +384,10 @@ UPDATE fragancias SET
   nombre_alternativo = COALESCE($2, nombre_alternativo),
   genero = COALESCE($3, genero),
   gramos_minimo = COALESCE($4, gramos_minimo),
+  numero_genero = COALESCE($5, numero_genero),
   updated_at = NOW()
-WHERE id = $5 AND deleted_at IS NULL
-RETURNING id, sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, activo, deleted_at, created_at, updated_at
+WHERE id = $6 AND deleted_at IS NULL
+RETURNING id, sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, activo, deleted_at, created_at, updated_at, numero_genero
 `
 
 type UpdateFraganciaParams struct {
@@ -334,6 +395,7 @@ type UpdateFraganciaParams struct {
 	NombreAlternativo pgtype.Text         `json:"nombre_alternativo"`
 	Genero            NullGeneroEnum      `json:"genero"`
 	GramosMinimo      decimal.NullDecimal `json:"gramos_minimo"`
+	NumeroGenero      pgtype.Int4         `json:"numero_genero"`
 	ID                int64               `json:"id"`
 }
 
@@ -343,6 +405,7 @@ func (q *Queries) UpdateFragancia(ctx context.Context, arg UpdateFraganciaParams
 		arg.NombreAlternativo,
 		arg.Genero,
 		arg.GramosMinimo,
+		arg.NumeroGenero,
 		arg.ID,
 	)
 	var i Fragancia
@@ -357,6 +420,7 @@ func (q *Queries) UpdateFragancia(ctx context.Context, arg UpdateFraganciaParams
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumeroGenero,
 	)
 	return i, err
 }

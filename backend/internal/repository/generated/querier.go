@@ -57,6 +57,7 @@ type Querier interface {
 	ExistsCorreo(ctx context.Context, lower string) (bool, error)
 	ExistsCuadreCerradoBySedeFecha(ctx context.Context, arg ExistsCuadreCerradoBySedeFechaParams) (bool, error)
 	ExistsFraganciaNombreComercial(ctx context.Context, arg ExistsFraganciaNombreComercialParams) (bool, error)
+	ExistsFraganciaNumeroGenero(ctx context.Context, arg ExistsFraganciaNumeroGeneroParams) (bool, error)
 	ExistsMetodoPagoCodigo(ctx context.Context, arg ExistsMetodoPagoCodigoParams) (bool, error)
 	ExistsMetodoPagoNombre(ctx context.Context, arg ExistsMetodoPagoNombreParams) (bool, error)
 	ExistsModeloEnvaseTipoTamano(ctx context.Context, arg ExistsModeloEnvaseTipoTamanoParams) (bool, error)
@@ -139,6 +140,7 @@ type Querier interface {
 	ListVariantesEnvasePaginated(ctx context.Context, arg ListVariantesEnvasePaginatedParams) ([]ListVariantesEnvasePaginatedRow, error)
 	ListVentasPaginated(ctx context.Context, arg ListVentasPaginatedParams) ([]ListVentasPaginatedRow, error)
 	MarkPasswordResetUsed(ctx context.Context, id int64) error
+	NextNumeroGeneroFragancia(ctx context.Context, arg NextNumeroGeneroFraganciaParams) (int32, error)
 	// ===========================================================================
 	// CUADRES DE CAJA (solo cerrados)
 	// ===========================================================================

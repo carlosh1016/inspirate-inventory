@@ -8,6 +8,7 @@ export interface FraganciaPayload {
   nombre_comercial: string;
   nombre_alternativo: string | null;
   genero: 'masculina' | 'femenina';
+  numero_genero: number;
   gramos_minimo: string;
 }
 

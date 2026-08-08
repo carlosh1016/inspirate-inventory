@@ -20,6 +20,7 @@ type FraganciaResponse struct {
 	NombreComercial   string        `json:"nombre_comercial"`
 	NombreAlternativo *string       `json:"nombre_alternativo"`
 	Genero            string        `json:"genero"`
+	NumeroGenero      int32         `json:"numero_genero"`
 	GramosMinimo      string        `json:"gramos_minimo"`
 	Activo            bool          `json:"activo"`
 	Stock             StockResponse `json:"stock"`
@@ -33,6 +34,7 @@ func toFraganciaResponseFromGet(f generated.GetFraganciaByIDRow) FraganciaRespon
 		NombreComercial:   f.NombreComercial,
 		NombreAlternativo: commonrepo.StringPtr(f.NombreAlternativo),
 		Genero:            string(f.Genero),
+		NumeroGenero:      f.NumeroGenero,
 		GramosMinimo:      f.GramosMinimo.String(),
 		Activo:            f.Activo,
 		Stock: StockResponse{
@@ -51,6 +53,7 @@ func toFraganciaResponseFromList(f generated.ListFraganciasPaginatedRow) Fraganc
 		NombreComercial:   f.NombreComercial,
 		NombreAlternativo: commonrepo.StringPtr(f.NombreAlternativo),
 		Genero:            string(f.Genero),
+		NumeroGenero:      f.NumeroGenero,
 		GramosMinimo:      f.GramosMinimo.String(),
 		Activo:            f.Activo,
 		Stock: StockResponse{
@@ -68,6 +71,7 @@ type CreateFraganciaRequest struct {
 	NombreComercial   string  `json:"nombre_comercial" validate:"required,min=2,max=200"`
 	NombreAlternativo *string `json:"nombre_alternativo,omitempty" validate:"omitempty,max=200"`
 	Genero            string  `json:"genero" validate:"required,oneof=masculina femenina"`
+	NumeroGenero      int32   `json:"numero_genero" validate:"required,min=1"`
 	GramosMinimo      string  `json:"gramos_minimo" validate:"required,numeric"`
 }
 
@@ -77,5 +81,11 @@ type UpdateFraganciaRequest struct {
 	NombreComercial   *string `json:"nombre_comercial,omitempty" validate:"omitempty,min=2,max=200"`
 	NombreAlternativo *string `json:"nombre_alternativo,omitempty" validate:"omitempty,max=200"`
 	Genero            *string `json:"genero,omitempty" validate:"omitempty,oneof=masculina femenina"`
+	NumeroGenero      *int32  `json:"numero_genero,omitempty" validate:"omitempty,min=1"`
 	GramosMinimo      *string `json:"gramos_minimo,omitempty" validate:"omitempty,numeric"`
+}
+
+// SiguienteNumeroResponse is the payload for GET /fragancias/siguiente-numero.
+type SiguienteNumeroResponse struct {
+	Siguiente int32 `json:"siguiente"`
 }

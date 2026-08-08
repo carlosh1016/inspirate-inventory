@@ -15,6 +15,7 @@ func (h *Handler) Router(r chi.Router) {
 		r.Use(middleware.RequireRole("admin", "vendedora"))
 
 		r.Get("/", h.List)
+		r.Get("/siguiente-numero", h.SiguienteNumero)
 		r.Get("/{id}", h.Get)
 		r.Post("/", h.Create)
 		r.Patch("/{id}", h.Update)

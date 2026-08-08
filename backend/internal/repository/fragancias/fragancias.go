@@ -20,6 +20,7 @@ type ListFilter struct {
 	Q              string
 	SedeID         int64
 	Genero         string
+	NumeroGenero   int32
 	Activo         string
 	StockBajo      bool
 	IncludeDeleted bool
@@ -32,6 +33,7 @@ type UpdateFields struct {
 	NombreAlternativo *string
 	Genero            *string
 	GramosMinimo      *string // decimal string; parsed by the caller
+	NumeroGenero      *int32
 }
 
 // Repository is the persistence port for fragancias, consumed by usecases.
@@ -40,7 +42,9 @@ type Repository interface {
 	GetByID(ctx context.Context, id int64) (generated.GetFraganciaByIDRow, error)
 	GetByIDIncludingDeleted(ctx context.Context, id int64) (generated.Fragancia, error)
 	ExistsNombreComercial(ctx context.Context, sedeID int64, nombre string, excludeID int64) (bool, error)
-	Insert(ctx context.Context, sedeID int64, nombreComercial string, nombreAlternativo *string, genero string, gramosMinimo string) (generated.Fragancia, error)
+	ExistsNumeroGenero(ctx context.Context, sedeID int64, genero string, numeroGenero int32, excludeID int64) (bool, error)
+	NextNumeroGenero(ctx context.Context, sedeID int64, genero string) (int32, error)
+	Insert(ctx context.Context, sedeID int64, nombreComercial string, nombreAlternativo *string, genero string, gramosMinimo string, numeroGenero int32) (generated.Fragancia, error)
 	Update(ctx context.Context, id int64, fields UpdateFields) (generated.Fragancia, error)
 	SoftDelete(ctx context.Context, id int64) error
 	Restore(ctx context.Context, id int64) (generated.Fragancia, error)

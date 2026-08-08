@@ -30,6 +30,7 @@ type ListInput struct {
 	Q              string
 	SedeID         int64
 	Genero         string
+	NumeroGenero   int32
 	Activo         string // "true" | "false" | "all"; default "true"
 	StockBajo      bool
 	IncludeDeleted bool
@@ -72,6 +73,7 @@ func (s *Service) List(ctx context.Context, in ListInput) (ListResult, error) {
 		Q:              in.Q,
 		SedeID:         in.SedeID,
 		Genero:         in.Genero,
+		NumeroGenero:   in.NumeroGenero,
 		Activo:         activo,
 		StockBajo:      in.StockBajo,
 		IncludeDeleted: in.IncludeDeleted,

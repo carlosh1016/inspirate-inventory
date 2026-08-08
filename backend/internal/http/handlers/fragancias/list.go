@@ -21,6 +21,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	pageSize, _ := strconv.Atoi(q.Get("page_size"))
+	numeroGenero, _ := strconv.Atoi(q.Get("numero_genero"))
 	stockBajo, _ := strconv.ParseBool(q.Get("stock_bajo"))
 	includeDeleted, _ := strconv.ParseBool(q.Get("include_deleted"))
 
@@ -31,6 +32,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		Q:              q.Get("q"),
 		SedeID:         requester.SedeID,
 		Genero:         q.Get("genero"),
+		NumeroGenero:   int32(numeroGenero),
 		Activo:         q.Get("activo"),
 		StockBajo:      stockBajo,
 		IncludeDeleted: includeDeleted,

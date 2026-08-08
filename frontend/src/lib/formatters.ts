@@ -57,3 +57,9 @@ export function formatRelative(iso: string): string {
 export function formatConsecutivoVenta(id: number): string {
   return `V-${id.toString().padStart(6, '0')}`;
 }
+
+/** "M-014" / "F-014" — código de fragancia por género (numero_genero). */
+export function formatCodigoFragancia(genero: 'masculina' | 'femenina', numeroGenero: number): string {
+  const prefijo = genero === 'masculina' ? 'M' : 'F';
+  return `${prefijo}-${numeroGenero.toString().padStart(3, '0')}`;
+}

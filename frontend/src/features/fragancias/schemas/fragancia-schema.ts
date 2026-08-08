@@ -8,6 +8,7 @@ export const fraganciaSchema = z.object({
     .optional()
     .or(z.literal('')),
   genero: z.enum(['masculina', 'femenina']),
+  numero_genero: z.number({ error: 'Requerido' }).int('Debe ser un número entero').min(1, 'Debe ser mayor a 0'),
   gramos_minimo: z
     .string()
     .min(1, 'Requerido')

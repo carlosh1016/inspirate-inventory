@@ -6,6 +6,7 @@ export interface Fragancia {
   nombre_comercial: string;
   nombre_alternativo: string | null;
   genero: Genero;
+  numero_genero: number;
   gramos_minimo: string;
   activo: boolean;
   stock: StockSnapshot;

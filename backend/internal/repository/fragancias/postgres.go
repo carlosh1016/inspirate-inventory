@@ -41,6 +41,7 @@ func (r *postgresRepository) ListPaginated(ctx context.Context, filter ListFilte
 		IncludeDeleted: filter.IncludeDeleted,
 		SedeID:         filter.SedeID,
 		Genero:         filter.Genero,
+		NumeroGenero:   filter.NumeroGenero,
 		Activo:         filter.Activo,
 		Q:              filter.Q,
 		StockBajo:      filter.StockBajo,
@@ -55,6 +56,7 @@ func (r *postgresRepository) ListPaginated(ctx context.Context, filter ListFilte
 		IncludeDeleted: filter.IncludeDeleted,
 		SedeID:         filter.SedeID,
 		Genero:         filter.Genero,
+		NumeroGenero:   filter.NumeroGenero,
 		Activo:         filter.Activo,
 		Q:              filter.Q,
 		StockBajo:      filter.StockBajo,
@@ -96,7 +98,23 @@ func (r *postgresRepository) ExistsNombreComercial(ctx context.Context, sedeID i
 	})
 }
 
-func (r *postgresRepository) Insert(ctx context.Context, sedeID int64, nombreComercial string, nombreAlternativo *string, genero string, gramosMinimo string) (generated.Fragancia, error) {
+func (r *postgresRepository) ExistsNumeroGenero(ctx context.Context, sedeID int64, genero string, numeroGenero int32, excludeID int64) (bool, error) {
+	return r.q.ExistsFraganciaNumeroGenero(ctx, generated.ExistsFraganciaNumeroGeneroParams{
+		SedeID:       sedeID,
+		Genero:       generated.GeneroEnum(genero),
+		NumeroGenero: numeroGenero,
+		ExcludeID:    excludeID,
+	})
+}
+
+func (r *postgresRepository) NextNumeroGenero(ctx context.Context, sedeID int64, genero string) (int32, error) {
+	return r.q.NextNumeroGeneroFragancia(ctx, generated.NextNumeroGeneroFraganciaParams{
+		SedeID: sedeID,
+		Genero: generated.GeneroEnum(genero),
+	})
+}
+
+func (r *postgresRepository) Insert(ctx context.Context, sedeID int64, nombreComercial string, nombreAlternativo *string, genero string, gramosMinimo string, numeroGenero int32) (generated.Fragancia, error) {
 	gramos, err := decimal.NewFromString(gramosMinimo)
 	if err != nil {
 		return generated.Fragancia{}, err
@@ -108,6 +126,7 @@ func (r *postgresRepository) Insert(ctx context.Context, sedeID int64, nombreCom
 		NombreAlternativo: repo.TextPtr(nombreAlternativo),
 		Genero:            generated.GeneroEnum(genero),
 		GramosMinimo:      gramos,
+		NumeroGenero:      numeroGenero,
 	})
 }
 
@@ -129,6 +148,9 @@ func (r *postgresRepository) Update(ctx context.Context, id int64, fields Update
 			return generated.Fragancia{}, err
 		}
 		params.GramosMinimo = decimal.NullDecimal{Decimal: gramos, Valid: true}
+	}
+	if fields.NumeroGenero != nil {
+		params.NumeroGenero = repo.Int4(fields.NumeroGenero)
 	}
 
 	f, err := r.q.UpdateFragancia(ctx, params)

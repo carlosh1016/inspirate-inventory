@@ -8,6 +8,7 @@ WHERE
   (@include_deleted::bool OR f.deleted_at IS NULL)
   AND (@sede_id::bigint = 0 OR f.sede_id = @sede_id)
   AND (@genero::text = '' OR f.genero::text = @genero)
+  AND (@numero_genero::int = 0 OR f.numero_genero = @numero_genero)
   AND (@activo::text = 'all' OR (@activo::text = 'true' AND f.activo = true) OR (@activo::text = 'false' AND f.activo = false))
   AND (@q::text = '' OR f.nombre_comercial ILIKE '%' || @q || '%' OR f.nombre_alternativo ILIKE '%' || @q || '%')
 GROUP BY f.id
@@ -36,6 +37,7 @@ SELECT COUNT(*) FROM (
     (@include_deleted::bool OR f.deleted_at IS NULL)
     AND (@sede_id::bigint = 0 OR f.sede_id = @sede_id)
     AND (@genero::text = '' OR f.genero::text = @genero)
+    AND (@numero_genero::int = 0 OR f.numero_genero = @numero_genero)
     AND (@activo::text = 'all' OR (@activo::text = 'true' AND f.activo = true) OR (@activo::text = 'false' AND f.activo = false))
     AND (@q::text = '' OR f.nombre_comercial ILIKE '%' || @q || '%' OR f.nombre_alternativo ILIKE '%' || @q || '%')
   GROUP BY f.id
@@ -60,8 +62,8 @@ GROUP BY f.id;
 SELECT * FROM fragancias WHERE id = $1;
 
 -- name: InsertFragancia :one
-INSERT INTO fragancias (sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO fragancias (sede_id, nombre_comercial, nombre_alternativo, genero, gramos_minimo, numero_genero)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: UpdateFragancia :one
@@ -70,6 +72,7 @@ UPDATE fragancias SET
   nombre_alternativo = COALESCE(sqlc.narg('nombre_alternativo'), nombre_alternativo),
   genero = COALESCE(sqlc.narg('genero'), genero),
   gramos_minimo = COALESCE(sqlc.narg('gramos_minimo'), gramos_minimo),
+  numero_genero = COALESCE(sqlc.narg('numero_genero'), numero_genero),
   updated_at = NOW()
 WHERE id = sqlc.arg('id') AND deleted_at IS NULL
 RETURNING *;
@@ -89,3 +92,15 @@ SELECT EXISTS(
   WHERE sede_id = @sede_id AND LOWER(nombre_comercial) = LOWER(@nombre_comercial) AND deleted_at IS NULL
     AND (@exclude_id::bigint = 0 OR id != @exclude_id)
 );
+
+-- name: ExistsFraganciaNumeroGenero :one
+SELECT EXISTS(
+  SELECT 1 FROM fragancias
+  WHERE sede_id = @sede_id AND genero = @genero AND numero_genero = @numero_genero AND deleted_at IS NULL
+    AND (@exclude_id::bigint = 0 OR id != @exclude_id)
+);
+
+-- name: NextNumeroGeneroFragancia :one
+SELECT COALESCE(MAX(numero_genero), 0) + 1 AS siguiente
+FROM fragancias
+WHERE sede_id = $1 AND genero = $2 AND deleted_at IS NULL;

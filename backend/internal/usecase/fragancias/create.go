@@ -20,6 +20,7 @@ type CreateInput struct {
 	NombreAlternativo *string
 	Genero            string
 	GramosMinimo      string
+	NumeroGenero      int32
 	RequesterID       int64
 	IP                string
 	UserAgent         string
@@ -39,12 +40,23 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (generated.GetFrag
 		)
 	}
 
+	numeroExists, err := s.Fragancias.ExistsNumeroGenero(ctx, in.SedeID, in.Genero, in.NumeroGenero, 0)
+	if err != nil {
+		return generated.GetFraganciaByIDRow{}, internalErr(err)
+	}
+	if numeroExists {
+		return generated.GetFraganciaByIDRow{}, domainerrors.NewConflict(
+			"Número en uso",
+			"Ya existe una fragancia con ese número en este género.",
+		)
+	}
+
 	var fragancia generated.Fragancia
 	err = commonrepo.WithTx(ctx, s.Pool, func(tx pgx.Tx) error {
 		txFragancias := repo.NewPostgres(tx)
 		txStock := stockactual.NewPostgres(tx)
 
-		f, err := txFragancias.Insert(ctx, in.SedeID, in.NombreComercial, in.NombreAlternativo, in.Genero, in.GramosMinimo)
+		f, err := txFragancias.Insert(ctx, in.SedeID, in.NombreComercial, in.NombreAlternativo, in.Genero, in.GramosMinimo, in.NumeroGenero)
 		if err != nil {
 			return err
 		}

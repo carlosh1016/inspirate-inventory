@@ -416,6 +416,7 @@ type Fragancia struct {
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	NumeroGenero      int32              `json:"numero_genero"`
 }
 
 type IdempotencyKey struct {

@@ -17,6 +17,7 @@ type UpdateInput struct {
 	NombreAlternativo *string
 	Genero            *string
 	GramosMinimo      *string
+	NumeroGenero      *int32
 	RequesterID       int64
 	IP                string
 	UserAgent         string
@@ -49,11 +50,16 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (generated.GetFrag
 		}
 	}
 
+	if err := s.checkNumeroGeneroUnique(ctx, before, in); err != nil {
+		return generated.GetFraganciaByIDRow{}, err
+	}
+
 	updated, err := s.Fragancias.Update(ctx, in.TargetID, repo.UpdateFields{
 		NombreComercial:   in.NombreComercial,
 		NombreAlternativo: in.NombreAlternativo,
 		Genero:            in.Genero,
 		GramosMinimo:      in.GramosMinimo,
+		NumeroGenero:      in.NumeroGenero,
 	})
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
@@ -70,4 +76,33 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (generated.GetFrag
 	s.audit(ctx, &in.RequesterID, "fragancia_editada", in.IP, in.UserAgent, &updated.ID, snapshot(before), snapshot(updated))
 
 	return result, nil
+}
+
+// checkNumeroGeneroUnique validates the (genero, numero_genero) pair when
+// either is changing, comparing against the effective (post-update) values.
+func (s *Service) checkNumeroGeneroUnique(ctx context.Context, before generated.Fragancia, in UpdateInput) error {
+	if in.Genero == nil && in.NumeroGenero == nil {
+		return nil
+	}
+
+	effectiveGenero := string(before.Genero)
+	if in.Genero != nil {
+		effectiveGenero = *in.Genero
+	}
+	effectiveNumero := before.NumeroGenero
+	if in.NumeroGenero != nil {
+		effectiveNumero = *in.NumeroGenero
+	}
+	if effectiveGenero == string(before.Genero) && effectiveNumero == before.NumeroGenero {
+		return nil
+	}
+
+	exists, err := s.Fragancias.ExistsNumeroGenero(ctx, before.SedeID, effectiveGenero, effectiveNumero, in.TargetID)
+	if err != nil {
+		return internalErr(err)
+	}
+	if exists {
+		return domainerrors.NewConflict("Número en uso", "Ya existe una fragancia con ese número en este género.")
+	}
+	return nil
 }

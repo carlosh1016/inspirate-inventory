@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { getErrorMessage } from '@/lib/errors';
 import { useCreateFragancia } from '../api/use-create-fragancia';
+import { fetchSiguienteNumeroFragancia } from '../api/use-siguiente-numero-fragancia';
 import { useUpdateFragancia } from '../api/use-update-fragancia';
 import { fraganciaSchema, type FraganciaInput } from '../schemas/fragancia-schema';
 import type { Fragancia } from '../types';
@@ -33,6 +34,7 @@ export function FraganciaForm({ initialData }: { initialData?: Fragancia }) {
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FraganciaInput>({
     resolver: zodResolver(fraganciaSchema),
@@ -40,15 +42,29 @@ export function FraganciaForm({ initialData }: { initialData?: Fragancia }) {
       nombre_comercial: initialData?.nombre_comercial ?? '',
       nombre_alternativo: initialData?.nombre_alternativo ?? '',
       genero: initialData?.genero ?? 'femenina',
+      numero_genero: initialData?.numero_genero,
       gramos_minimo: initialData?.gramos_minimo ?? '',
     },
   });
+
+  // Sugiere el siguiente numero_genero disponible al elegir género — solo en
+  // creación; el usuario puede sobreescribirlo (ej. al migrar el catálogo
+  // físico de la dueña, donde los números ya están fijos por hoja).
+  const handleGeneroChange = (value: 'masculina' | 'femenina') => {
+    if (isEdit) return;
+    fetchSiguienteNumeroFragancia(value)
+      .then((siguiente) => setValue('numero_genero', siguiente))
+      .catch(() => {
+        // La sugerencia es solo UX; si falla, el usuario escribe el número a mano.
+      });
+  };
 
   const onSubmit = async (data: FraganciaInput) => {
     const payload = {
       nombre_comercial: data.nombre_comercial,
       nombre_alternativo: data.nombre_alternativo ? data.nombre_alternativo : null,
       genero: data.genero,
+      numero_genero: data.numero_genero,
       gramos_minimo: data.gramos_minimo,
     };
     try {
@@ -88,13 +104,31 @@ export function FraganciaForm({ initialData }: { initialData?: Fragancia }) {
               <SelectField
                 label="Género"
                 value={field.value}
-                onChange={field.onChange}
+                onChange={(value) => {
+                  field.onChange(value);
+                  handleGeneroChange(value as 'masculina' | 'femenina');
+                }}
                 options={GENERO_OPTIONS}
                 error={errors.genero?.message}
                 disabled={isSubmitting}
               />
             )}
           />
+
+          <FormField id="numero_genero" label="Número por género" error={errors.numero_genero?.message}>
+            <Input
+              id="numero_genero"
+              type="number"
+              min={1}
+              step={1}
+              disabled={isSubmitting}
+              {...register('numero_genero', { valueAsNumber: true })}
+            />
+            <p className="text-xs text-muted-foreground">
+              El número con el que la dueña identifica esta fragancia dentro de su género (ej. la 14ª femenina).
+              Se sugiere automáticamente, pero puedes cambiarlo.
+            </p>
+          </FormField>
 
           <Controller
             control={control}

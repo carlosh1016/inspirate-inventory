@@ -38,6 +38,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		NombreComercial:   req.NombreComercial,
 		NombreAlternativo: req.NombreAlternativo,
 		Genero:            req.Genero,
+		NumeroGenero:      req.NumeroGenero,
 		GramosMinimo:      req.GramosMinimo,
 		RequesterID:       requester.ID,
 		IP:                middleware.IPFromContext(r.Context()),

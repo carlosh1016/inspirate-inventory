@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import type { Column } from '@/components/data-table/types';
 import { StockBadge } from '@/components/stock-badge';
-import { formatGramos } from '@/lib/formatters';
+import { formatCodigoFragancia, formatGramos } from '@/lib/formatters';
 import type { Meta } from '@/types/api';
 import type { Fragancia } from '../types';
 
@@ -20,6 +20,15 @@ interface Props {
 }
 
 const columns: Column<Fragancia>[] = [
+  {
+    key: 'numero_genero',
+    header: 'Código',
+    cell: (f) => (
+      <span className="font-mono text-xs text-muted-foreground">
+        {formatCodigoFragancia(f.genero, f.numero_genero)}
+      </span>
+    ),
+  },
   {
     key: 'nombre_comercial',
     header: 'Nombre comercial',
