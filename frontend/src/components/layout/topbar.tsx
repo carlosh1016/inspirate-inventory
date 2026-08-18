@@ -10,7 +10,7 @@ export function Topbar() {
   const setMobileDrawerOpen = useUIStore((s) => s.setMobileDrawerOpen);
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:px-6">
+    <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-sm lg:px-6">
       <Button
         variant="ghost"
         size="icon"

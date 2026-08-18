@@ -27,20 +27,30 @@ export function StockBadge({ total, minimo, unidad = 'gramos', className }: Prop
     unidad === 'gramos' ? formatGramos(t) : `${t} ${t === 1 ? 'unidad' : 'unidades'}`;
 
   const styles = {
-    rojo: 'bg-destructive/10 text-destructive',
-    ambar: 'bg-warning/10 text-warning',
-    verde: 'bg-success/10 text-success',
+    rojo: 'border-destructive/20 bg-destructive/10 text-destructive',
+    ambar: 'border-warning/20 bg-warning/10 text-warning',
+    verde: 'border-success/20 bg-success/10 text-success',
+  } as const;
+
+  const dotStyles = {
+    rojo: 'bg-destructive',
+    ambar: 'bg-warning',
+    verde: 'bg-success',
   } as const;
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium whitespace-nowrap',
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap',
         styles[level],
         className,
       )}
     >
-      {level === 'rojo' && <AlertTriangle className="size-3" />}
+      {level === 'rojo' ? (
+        <AlertTriangle className="size-3" />
+      ) : (
+        <span className={cn('size-1.5 shrink-0 rounded-full', dotStyles[level])} />
+      )}
       {label}
     </span>
   );

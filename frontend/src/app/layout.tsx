@@ -1,13 +1,19 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { JetBrains_Mono, Manrope } from 'next/font/google';
 
 import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
 import { Providers } from './providers';
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-manrope',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
   display: 'swap',
 });
 
@@ -22,7 +28,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} h-full`} suppressHydrationWarning>
+    <html
+      lang="es"
+      className={`${manrope.variable} ${jetbrainsMono.variable} h-full`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full font-sans antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
         <Toaster position="top-right" richColors />

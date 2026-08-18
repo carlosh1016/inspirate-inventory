@@ -8,7 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -129,9 +129,12 @@
   }
 }
 
-/* ===== Inspírate: paleta ámbar apagado + Inter (override del tema shadcn) ===== */
+/* ===== Inspírate: paleta navy + amarillo, Manrope + JetBrains Mono ===== */
+/* Inspirado en el sistema de diseño "Heritage Fragrance" generado en Stitch:
+   navy como color de marca (navegación, texto, botones primarios) y un
+   amarillo vibrante reservado para acciones/alertas destacadas. */
 @theme inline {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --color-primary-hover: var(--primary-hover);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -139,25 +142,30 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
 }
 
 :root {
-  /* Primario ámbar apagado */
-  --primary: #b8763a;
+  /* Primario: navy corporativo */
+  --primary: #00234e;
   --primary-foreground: #ffffff;
-  --primary-hover: #a0662e;
-  /* Focus ring ámbar */
-  --ring: #b8763a;
+  --primary-hover: #001a3a;
+  /* Focus ring navy */
+  --ring: #00234e;
   /* Radios (spec) */
   --radius: 0.375rem;
   /* Sidebar en tono primario para acentos */
-  --sidebar-primary: #b8763a;
+  --sidebar-primary: #00234e;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-ring: #b8763a;
+  --sidebar-ring: #00234e;
+  /* Amarillo vibrante: reservado para CTAs y alertas de alta prioridad */
+  --highlight: #fcd400;
+  --highlight-foreground: #00234e;
   /* Semánticos */
   --success: #3b7a4f;
   --success-foreground: #ffffff;
-  --warning: #b8860b;
+  --warning: #b8541f;
   --warning-foreground: #ffffff;
   --info: #3d6fb8;
   --info-foreground: #ffffff;

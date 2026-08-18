@@ -14,6 +14,10 @@ frontend/next-env.d.ts
 frontend/npm-debug.log*
 frontend/.turbo/
 
+# Página local de preview del sistema de diseño (sin auth/backend, solo dev).
+# Nunca debe llegar a dev ni a main.
+frontend/src/app/preview/
+
 # --- Env files (nunca .env.example) ---
 .env
 .env.local
