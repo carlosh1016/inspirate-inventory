@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 import { useAuthStore } from '@/stores/auth-store';
@@ -20,8 +21,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full w-[240px] flex-col bg-primary text-primary-foreground">
       <div className="border-b border-white/10 p-6">
-        <h1 className="text-xl font-bold tracking-tight text-white">Inspírate</h1>
-        <p className="mt-1 font-mono text-[10px] tracking-widest text-white/60 uppercase">
+        <div className="rounded-lg bg-white p-3">
+          <Image
+            src="/inspirate-logo.jpg"
+            alt="Inspírate Perfumes & Cosmética"
+            width={1542}
+            height={688}
+            priority
+            className="h-auto w-full"
+          />
+        </div>
+        <p className="mt-3 font-mono text-[10px] tracking-widest text-white/60 uppercase">
           Inventario
         </p>
       </div>

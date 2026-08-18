@@ -2,6 +2,12 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Tailwind v4 excluye del escaneo automático las rutas listadas en
+   .gitignore (incluida frontend/src/app/preview/, ignorada a propósito
+   para que no llegue a git). La forzamos de vuelta explícitamente para
+   que sus clases sí se generen en dev. */
+@source "./preview";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
