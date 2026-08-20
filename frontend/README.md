@@ -19,8 +19,8 @@ Aplicación web (Next.js App Router + TypeScript) para el sistema de inventario 
 
 ```bash
 cp .env.example .env.local
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Abrir [http://localhost:3000](http://localhost:3000).
@@ -29,10 +29,10 @@ Abrir [http://localhost:3000](http://localhost:3000).
 
 | Comando | Descripción |
 |---|---|
-| `npm run dev` | Levanta el servidor de desarrollo |
-| `npm run build` | Compila la aplicación para producción |
-| `npm run start` | Sirve el build de producción |
-| `npm run lint` | Corre ESLint |
+| `pnpm run dev` | Levanta el servidor de desarrollo |
+| `pnpm run build` | Compila la aplicación para producción |
+| `pnpm run start` | Sirve el build de producción |
+| `pnpm run lint` | Corre ESLint |
 
 ## Estructura
 
