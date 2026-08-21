@@ -9,9 +9,9 @@ import (
 )
 
 func TestGenerateAndParseAccessToken(t *testing.T) {
-	m := jwt.New("test-secret", 15*time.Minute)
+	m := jwt.New("test-secret")
 
-	token, expiresAt, err := m.GenerateAccessToken(42, "admin", 1)
+	token, expiresAt, err := m.GenerateAccessToken(42, "admin", 1, 15*time.Minute)
 	if err != nil {
 		t.Fatalf("unexpected error generating token: %v", err)
 	}
@@ -32,9 +32,9 @@ func TestGenerateAndParseAccessToken(t *testing.T) {
 }
 
 func TestParseExpiredToken(t *testing.T) {
-	m := jwt.New("test-secret", -1*time.Minute)
+	m := jwt.New("test-secret")
 
-	token, _, err := m.GenerateAccessToken(1, "vendedora", 1)
+	token, _, err := m.GenerateAccessToken(1, "vendedora", 1, -1*time.Minute)
 	if err != nil {
 		t.Fatalf("unexpected error generating token: %v", err)
 	}
@@ -46,13 +46,13 @@ func TestParseExpiredToken(t *testing.T) {
 }
 
 func TestParseTokenWithWrongSecret(t *testing.T) {
-	issuer := jwt.New("secret-a", 15*time.Minute)
-	token, _, err := issuer.GenerateAccessToken(1, "admin", 1)
+	issuer := jwt.New("secret-a")
+	token, _, err := issuer.GenerateAccessToken(1, "admin", 1, 15*time.Minute)
 	if err != nil {
 		t.Fatalf("unexpected error generating token: %v", err)
 	}
 
-	verifier := jwt.New("secret-b", 15*time.Minute)
+	verifier := jwt.New("secret-b")
 	_, err = verifier.ParseAccessToken(token)
 	if !errors.Is(err, jwt.ErrInvalidToken) {
 		t.Fatalf("expected ErrInvalidToken, got %v", err)
@@ -60,7 +60,7 @@ func TestParseTokenWithWrongSecret(t *testing.T) {
 }
 
 func TestParseGarbageToken(t *testing.T) {
-	m := jwt.New("test-secret", 15*time.Minute)
+	m := jwt.New("test-secret")
 	if _, err := m.ParseAccessToken("not-a-jwt"); !errors.Is(err, jwt.ErrInvalidToken) {
 		t.Fatalf("expected ErrInvalidToken, got %v", err)
 	}

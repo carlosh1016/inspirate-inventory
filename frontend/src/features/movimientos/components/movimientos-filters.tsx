@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermission } from '@/hooks/use-permission';
 import type { TipoItem } from '@/types/domain';
+import { useModelosFullLookup } from '@/features/modelos-envase/api/use-modelos-full-lookup';
 import { searchCatalogItems, type CatalogItemOption } from '../api/search-items';
 import { useUsuariosSelect } from '../api/use-usuarios-select';
 import type { MovimientosFilters } from '../api/use-movimientos';
@@ -43,6 +44,7 @@ const UBICACION_OPTIONS = [
 export function MovimientosFiltersBar({ filters, setFilter, setFilters }: Props) {
   const { isAdmin } = usePermission();
   const { data: usuarios } = useUsuariosSelect(isAdmin);
+  const { data: modelosMap } = useModelosFullLookup();
 
   const usuarioOptions = [
     { value: '0', label: 'Todos los usuarios' },
@@ -73,7 +75,7 @@ export function MovimientosFiltersBar({ filters, setFilter, setFilters }: Props)
             onChange={(id, label) =>
               setFilters({ item_id: id ?? 0, item_nombre: label ?? '' })
             }
-            searchFn={(q) => searchCatalogItems(filters.tipo_item as TipoItem, q)}
+            searchFn={(q) => searchCatalogItems(filters.tipo_item as TipoItem, q, modelosMap)}
             placeholder="Ítem específico…"
             renderOption={(o) => (
               <span>

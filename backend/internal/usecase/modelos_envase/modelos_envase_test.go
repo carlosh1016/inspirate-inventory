@@ -247,6 +247,45 @@ func TestUpdateUnknownModeloNotFound(t *testing.T) {
 	assertCode(t, err, domainerrors.CodeNotFound)
 }
 
+func TestCreateSinVariantesAutoCreaVarianteOculta(t *testing.T) {
+	env := newTestEnv(t)
+	ctx := context.Background()
+
+	in := createModelo(t, env, "Envase de lujo", "1.00")
+	in.SinVariantes = true
+	in.SedeID = env.sedeID
+
+	m, err := env.service.Create(ctx, in)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if m.TieneVariantes {
+		t.Fatal("expected TieneVariantes=false")
+	}
+	if m.VariantesActivas != 1 {
+		t.Fatalf("expected exactly 1 auto-created variante, got %d", m.VariantesActivas)
+	}
+
+	var color string
+	var vitrina, bodega int
+	err = env.pool.QueryRow(ctx,
+		`SELECT v.color,
+		   (SELECT COUNT(*) FROM stock_actual WHERE tipo_item = 'variante_envase' AND item_id = v.id AND ubicacion = 'vitrina'),
+		   (SELECT COUNT(*) FROM stock_actual WHERE tipo_item = 'variante_envase' AND item_id = v.id AND ubicacion = 'bodega')
+		 FROM variantes_envase v WHERE v.modelo_envase_id = $1`,
+		m.ID,
+	).Scan(&color, &vitrina, &bodega)
+	if err != nil {
+		t.Fatalf("querying auto-created variante: %v", err)
+	}
+	if color != "Único" {
+		t.Fatalf("expected sentinel color Único, got %q", color)
+	}
+	if vitrina != 1 || bodega != 1 {
+		t.Fatalf("expected stock rows seeded for both ubicaciones, got vitrina=%d bodega=%d", vitrina, bodega)
+	}
+}
+
 func TestDeleteUnknownModeloNotFound(t *testing.T) {
 	env := newTestEnv(t)
 

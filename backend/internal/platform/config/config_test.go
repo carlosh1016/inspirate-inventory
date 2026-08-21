@@ -30,8 +30,11 @@ func TestLoadSuccess(t *testing.T) {
 	if len(cfg.CORSAllowedOrigins) != 2 {
 		t.Errorf("expected 2 CORS origins, got %v", cfg.CORSAllowedOrigins)
 	}
-	if cfg.JWTAccessTTL.String() != "15m0s" {
-		t.Errorf("expected default JWTAccessTTL=15m, got %s", cfg.JWTAccessTTL)
+	if cfg.JWTAccessTTLAdmin.String() != "24h0m0s" {
+		t.Errorf("expected default JWTAccessTTLAdmin=24h, got %s", cfg.JWTAccessTTLAdmin)
+	}
+	if cfg.JWTAccessTTLVendedora.String() != "10m0s" {
+		t.Errorf("expected default JWTAccessTTLVendedora=10m, got %s", cfg.JWTAccessTTLVendedora)
 	}
 }
 

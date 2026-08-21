@@ -76,7 +76,7 @@ func (q *Queries) ExistsModeloEnvaseTipoTamano(ctx context.Context, arg ExistsMo
 }
 
 const getModeloEnvaseByID = `-- name: GetModeloEnvaseByID :one
-SELECT m.id, m.tipo, m.tamano_oz, m.equiv_gramos, m.precio_solo, m.precio_con_fragancia, m.precio_recarga, m.activo, m.deleted_at, m.created_at, m.updated_at,
+SELECT m.id, m.tipo, m.tamano_oz, m.equiv_gramos, m.precio_solo, m.precio_con_fragancia, m.precio_recarga, m.activo, m.deleted_at, m.created_at, m.updated_at, m.tiene_variantes,
   COUNT(v.id) FILTER (WHERE v.deleted_at IS NULL) AS variantes_activas
 FROM modelos_envase m
 LEFT JOIN variantes_envase v ON v.modelo_envase_id = m.id
@@ -96,6 +96,7 @@ type GetModeloEnvaseByIDRow struct {
 	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	TieneVariantes     bool               `json:"tiene_variantes"`
 	VariantesActivas   int64              `json:"variantes_activas"`
 }
 
@@ -114,13 +115,14 @@ func (q *Queries) GetModeloEnvaseByID(ctx context.Context, id int64) (GetModeloE
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TieneVariantes,
 		&i.VariantesActivas,
 	)
 	return i, err
 }
 
 const getModeloEnvaseByIDIncludingDeleted = `-- name: GetModeloEnvaseByIDIncludingDeleted :one
-SELECT id, tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, activo, deleted_at, created_at, updated_at FROM modelos_envase WHERE id = $1
+SELECT id, tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, activo, deleted_at, created_at, updated_at, tiene_variantes FROM modelos_envase WHERE id = $1
 `
 
 func (q *Queries) GetModeloEnvaseByIDIncludingDeleted(ctx context.Context, id int64) (ModelosEnvase, error) {
@@ -138,14 +140,15 @@ func (q *Queries) GetModeloEnvaseByIDIncludingDeleted(ctx context.Context, id in
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TieneVariantes,
 	)
 	return i, err
 }
 
 const insertModeloEnvase = `-- name: InsertModeloEnvase :one
-INSERT INTO modelos_envase (tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, activo, deleted_at, created_at, updated_at
+INSERT INTO modelos_envase (tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, tiene_variantes)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, activo, deleted_at, created_at, updated_at, tiene_variantes
 `
 
 type InsertModeloEnvaseParams struct {
@@ -155,6 +158,7 @@ type InsertModeloEnvaseParams struct {
 	PrecioSolo         decimal.Decimal `json:"precio_solo"`
 	PrecioConFragancia decimal.Decimal `json:"precio_con_fragancia"`
 	PrecioRecarga      decimal.Decimal `json:"precio_recarga"`
+	TieneVariantes     bool            `json:"tiene_variantes"`
 }
 
 func (q *Queries) InsertModeloEnvase(ctx context.Context, arg InsertModeloEnvaseParams) (ModelosEnvase, error) {
@@ -165,6 +169,7 @@ func (q *Queries) InsertModeloEnvase(ctx context.Context, arg InsertModeloEnvase
 		arg.PrecioSolo,
 		arg.PrecioConFragancia,
 		arg.PrecioRecarga,
+		arg.TieneVariantes,
 	)
 	var i ModelosEnvase
 	err := row.Scan(
@@ -179,12 +184,13 @@ func (q *Queries) InsertModeloEnvase(ctx context.Context, arg InsertModeloEnvase
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TieneVariantes,
 	)
 	return i, err
 }
 
 const listModelosEnvasePaginated = `-- name: ListModelosEnvasePaginated :many
-SELECT m.id, m.tipo, m.tamano_oz, m.equiv_gramos, m.precio_solo, m.precio_con_fragancia, m.precio_recarga, m.activo, m.deleted_at, m.created_at, m.updated_at,
+SELECT m.id, m.tipo, m.tamano_oz, m.equiv_gramos, m.precio_solo, m.precio_con_fragancia, m.precio_recarga, m.activo, m.deleted_at, m.created_at, m.updated_at, m.tiene_variantes,
   COUNT(v.id) FILTER (WHERE v.deleted_at IS NULL) AS variantes_activas
 FROM modelos_envase m
 LEFT JOIN variantes_envase v ON v.modelo_envase_id = m.id
@@ -226,6 +232,7 @@ type ListModelosEnvasePaginatedRow struct {
 	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	TieneVariantes     bool               `json:"tiene_variantes"`
 	VariantesActivas   int64              `json:"variantes_activas"`
 }
 
@@ -259,6 +266,7 @@ func (q *Queries) ListModelosEnvasePaginated(ctx context.Context, arg ListModelo
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TieneVariantes,
 			&i.VariantesActivas,
 		); err != nil {
 			return nil, err
@@ -291,7 +299,7 @@ UPDATE modelos_envase SET
   precio_recarga = COALESCE($6, precio_recarga),
   updated_at = NOW()
 WHERE id = $7 AND deleted_at IS NULL
-RETURNING id, tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, activo, deleted_at, created_at, updated_at
+RETURNING id, tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, activo, deleted_at, created_at, updated_at, tiene_variantes
 `
 
 type UpdateModeloEnvaseParams struct {
@@ -327,6 +335,7 @@ func (q *Queries) UpdateModeloEnvase(ctx context.Context, arg UpdateModeloEnvase
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TieneVariantes,
 	)
 	return i, err
 }

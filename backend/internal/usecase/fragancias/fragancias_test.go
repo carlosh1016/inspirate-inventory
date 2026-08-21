@@ -69,13 +69,13 @@ func TestUpdateNombreCollisionConflicts(t *testing.T) {
 	env := newTestEnv(t)
 
 	f1, err := env.service.Create(context.Background(), usecase.CreateInput{
-		SedeID: env.sedeID, NombreComercial: "Black Opium", Genero: "femenina", GramosMinimo: "5.00", RequesterID: env.requesterID,
+		SedeID: env.sedeID, NombreComercial: "Black Opium", Genero: "femenina", GramosMinimo: "5.00", NumeroGenero: 1, RequesterID: env.requesterID,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if _, err := env.service.Create(context.Background(), usecase.CreateInput{
-		SedeID: env.sedeID, NombreComercial: "Libre", Genero: "femenina", GramosMinimo: "5.00", RequesterID: env.requesterID,
+		SedeID: env.sedeID, NombreComercial: "Libre", Genero: "femenina", GramosMinimo: "5.00", NumeroGenero: 2, RequesterID: env.requesterID,
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

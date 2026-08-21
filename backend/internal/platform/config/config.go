@@ -16,7 +16,8 @@ type Config struct {
 	LogLevel               string        `env:"LOG_LEVEL" envDefault:"info"`
 	DatabaseURL            string        `env:"DATABASE_URL,required,notEmpty"`
 	JWTSecret              string        `env:"JWT_SECRET,required,notEmpty"`
-	JWTAccessTTL           time.Duration `env:"JWT_ACCESS_TTL" envDefault:"15m"`
+	JWTAccessTTLAdmin      time.Duration `env:"JWT_ACCESS_TTL_ADMIN" envDefault:"24h"`
+	JWTAccessTTLVendedora  time.Duration `env:"JWT_ACCESS_TTL_VENDEDORA" envDefault:"10m"`
 	JWTRefreshTTLAdmin     time.Duration `env:"JWT_REFRESH_TTL_ADMIN" envDefault:"720h"`
 	JWTRefreshTTLVendedora time.Duration `env:"JWT_REFRESH_TTL_VENDEDORA" envDefault:"8h"`
 	ResendAPIKey           string        `env:"RESEND_API_KEY"`

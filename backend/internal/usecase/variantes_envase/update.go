@@ -43,8 +43,8 @@ func (s *Service) Update(ctx context.Context, in UpdateInput) (generated.GetVari
 		}
 		if exists {
 			return generated.GetVarianteEnvaseByIDRow{}, domainerrors.NewConflict(
-				"Color en uso",
-				"Ya existe una variante con ese color para este modelo de envase.",
+				"Grosor en uso",
+				"Ya existe una variante con ese grosor para este modelo de envase.",
 			)
 		}
 	}

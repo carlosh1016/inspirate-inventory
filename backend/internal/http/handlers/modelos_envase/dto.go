@@ -16,6 +16,7 @@ type ModeloEnvaseResponse struct {
 	PrecioConFragancia string    `json:"precio_con_fragancia"`
 	PrecioRecarga      string    `json:"precio_recarga"`
 	Activo             bool      `json:"activo"`
+	TieneVariantes     bool      `json:"tiene_variantes"`
 	VariantesActivas   int64     `json:"variantes_activas"`
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
@@ -31,6 +32,7 @@ func toModeloEnvaseResponseFromGet(m generated.GetModeloEnvaseByIDRow) ModeloEnv
 		PrecioConFragancia: m.PrecioConFragancia.String(),
 		PrecioRecarga:      m.PrecioRecarga.String(),
 		Activo:             m.Activo,
+		TieneVariantes:     m.TieneVariantes,
 		VariantesActivas:   m.VariantesActivas,
 		CreatedAt:          m.CreatedAt.Time,
 		UpdatedAt:          m.UpdatedAt.Time,
@@ -47,6 +49,7 @@ func toModeloEnvaseResponseFromList(m generated.ListModelosEnvasePaginatedRow) M
 		PrecioConFragancia: m.PrecioConFragancia.String(),
 		PrecioRecarga:      m.PrecioRecarga.String(),
 		Activo:             m.Activo,
+		TieneVariantes:     m.TieneVariantes,
 		VariantesActivas:   m.VariantesActivas,
 		CreatedAt:          m.CreatedAt.Time,
 		UpdatedAt:          m.UpdatedAt.Time,
@@ -54,6 +57,9 @@ func toModeloEnvaseResponseFromList(m generated.ListModelosEnvasePaginatedRow) M
 }
 
 // CreateModeloEnvaseRequest is the payload for POST /modelos-envase.
+// TieneVariantes defaults to true when omitted (nil) — most modelos vary by
+// grosor. Set it to false only for a self-contained modelo like "envase de
+// lujo" that never varies.
 type CreateModeloEnvaseRequest struct {
 	Tipo               string `json:"tipo" validate:"required,min=2,max=100"`
 	TamanoOz           string `json:"tamano_oz" validate:"required,numeric"`
@@ -61,6 +67,7 @@ type CreateModeloEnvaseRequest struct {
 	PrecioSolo         string `json:"precio_solo" validate:"required,numeric"`
 	PrecioConFragancia string `json:"precio_con_fragancia" validate:"required,numeric"`
 	PrecioRecarga      string `json:"precio_recarga" validate:"required,numeric"`
+	TieneVariantes     *bool  `json:"tiene_variantes,omitempty"`
 }
 
 // UpdateModeloEnvaseRequest is the payload for PATCH /modelos-envase/:id. A

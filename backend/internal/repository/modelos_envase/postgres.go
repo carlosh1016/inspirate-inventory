@@ -98,7 +98,7 @@ func (r *postgresRepository) CountVariantesActivas(ctx context.Context, modeloEn
 	return r.q.CountVariantesActivasByModelo(ctx, modeloEnvaseID)
 }
 
-func (r *postgresRepository) Insert(ctx context.Context, tipo, tamanoOz, equivGramos, precioSolo, precioConFragancia, precioRecarga string) (generated.ModelosEnvase, error) {
+func (r *postgresRepository) Insert(ctx context.Context, tipo, tamanoOz, equivGramos, precioSolo, precioConFragancia, precioRecarga string, tieneVariantes bool) (generated.ModelosEnvase, error) {
 	tamano, err := decimal.NewFromString(tamanoOz)
 	if err != nil {
 		return generated.ModelosEnvase{}, err
@@ -127,6 +127,7 @@ func (r *postgresRepository) Insert(ctx context.Context, tipo, tamanoOz, equivGr
 		PrecioSolo:         solo,
 		PrecioConFragancia: conFragancia,
 		PrecioRecarga:      recarga,
+		TieneVariantes:     tieneVariantes,
 	})
 }
 

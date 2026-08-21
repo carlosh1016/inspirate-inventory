@@ -8,6 +8,8 @@ import (
 
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/auditoria"
 	repo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/modelos_envase"
+	stockactual "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/stock_actual"
+	variantesenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/variantes_envase"
 	usecase "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/modelos_envase"
 )
 
@@ -34,7 +36,10 @@ func newTestEnv(t *testing.T) *testEnv {
 	requesterID := seedUsuario(t, pool, sedeID, "admin@test.local", "admin")
 
 	service := usecase.NewService(
+		pool,
 		repo.NewPostgres(pool),
+		variantesenvase.NewPostgres(pool),
+		stockactual.NewPostgres(pool),
 		auditoria.NewPostgres(pool),
 	)
 

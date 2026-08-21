@@ -8,7 +8,7 @@ import type { ModeloEnvase } from '../types';
 export function useUpdateModeloEnvase(id: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Partial<ModeloEnvasePayload>) => {
+    mutationFn: async (input: Partial<Omit<ModeloEnvasePayload, 'tiene_variantes'>>) => {
       const res = await api.patch<ApiEnvelope<ModeloEnvase>>(`/modelos-envase/${id}`, input);
       return res.data.data;
     },

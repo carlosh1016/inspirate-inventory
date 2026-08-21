@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { TipoItem, Ubicacion } from '@/types/domain';
+import { useModelosFullLookup } from '@/features/modelos-envase/api/use-modelos-full-lookup';
 import { searchCatalogItems, type CatalogItemOption } from '../api/search-items';
 
 export interface MovimientoItemInput {
@@ -61,6 +62,7 @@ export function MovimientoItemForm({
   externalError,
 }: Props) {
   const isFragancia = value.tipo_item === 'fragancia';
+  const { data: modelosMap } = useModelosFullLookup();
 
   return (
     <div className="space-y-3 rounded-lg border border-border p-4">
@@ -93,7 +95,7 @@ export function MovimientoItemForm({
             onChange={(id, label) =>
               onChange({ ...value, item_id: id ?? 0, item_nombre: label ?? '' })
             }
-            searchFn={(q) => searchCatalogItems(value.tipo_item as TipoItem, q)}
+            searchFn={(q) => searchCatalogItems(value.tipo_item as TipoItem, q, modelosMap)}
             disabled={!value.tipo_item}
             placeholder={value.tipo_item ? 'Buscar ítem…' : 'Elige un tipo primero'}
             renderOption={(o) => (

@@ -33,7 +33,7 @@ export function VariantesEnvaseFiltersBar({ filters, setFilter }: Props) {
       <SearchInput
         value={filters.q}
         onChange={(v) => setFilter('q', v)}
-        placeholder="Buscar por color…"
+        placeholder="Buscar por grosor…"
         className="w-full sm:w-56"
       />
       <SelectFilter

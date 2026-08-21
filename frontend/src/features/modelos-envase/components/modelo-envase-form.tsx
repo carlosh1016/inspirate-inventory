@@ -11,7 +11,9 @@ import { FormField } from '@/components/forms/form-field';
 import { MoneyInput } from '@/components/forms/money-input';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { getErrorMessage } from '@/lib/errors';
 import { useCreateModeloEnvase } from '../api/use-create-modelo-envase';
 import { useUpdateModeloEnvase } from '../api/use-update-modelo-envase';
@@ -40,13 +42,21 @@ export function ModeloEnvaseForm({ initialData }: { initialData?: ModeloEnvase }
       precio_solo: initialData?.precio_solo ?? '',
       precio_con_fragancia: initialData?.precio_con_fragancia ?? '',
       precio_recarga: initialData?.precio_recarga ?? '',
+      tiene_variantes: initialData?.tiene_variantes ?? true,
     },
   });
 
   const onSubmit = async (data: ModeloEnvaseInput) => {
     try {
       if (isEdit) {
-        await update.mutateAsync(data);
+        await update.mutateAsync({
+          tipo: data.tipo,
+          tamano_oz: data.tamano_oz,
+          equiv_gramos: data.equiv_gramos,
+          precio_solo: data.precio_solo,
+          precio_con_fragancia: data.precio_con_fragancia,
+          precio_recarga: data.precio_recarga,
+        });
         toast.success('Modelo actualizado');
       } else {
         await create.mutateAsync(data);
@@ -116,6 +126,30 @@ export function ModeloEnvaseForm({ initialData }: { initialData?: ModeloEnvase }
               )}
             />
           </div>
+
+          <Controller
+            control={control}
+            name="tiene_variantes"
+            render={({ field }) => (
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="tiene_variantes"
+                  checked={!field.value}
+                  disabled={isSubmitting || isEdit}
+                  onCheckedChange={(next) => field.onChange(next !== true)}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="tiene_variantes" className="font-normal">
+                    Este modelo no tiene variantes (ej. envase de lujo)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Márcalo solo si este envase es único y no varía por grosor. No se puede cambiar después de
+                    creado.
+                  </p>
+                </div>
+              </div>
+            )}
+          />
 
           <div className="flex justify-end gap-2 pt-2">
             <Link href={BASE_PATH} className={buttonVariants({ variant: 'outline' })}>

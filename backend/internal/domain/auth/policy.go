@@ -50,3 +50,13 @@ func RefreshTokenTTL(rol string, adminTTL, vendedoraTTL time.Duration) time.Dura
 	}
 	return vendedoraTTL
 }
+
+// AccessTokenTTL picks the access-token lifetime for rol: admins get
+// adminTTL (~24h), everyone else gets vendedoraTTL (~10min) — vendedoras
+// share computers on the sales floor, so their sessions expire fast.
+func AccessTokenTTL(rol string, adminTTL, vendedoraTTL time.Duration) time.Duration {
+	if rol == "admin" {
+		return adminTTL
+	}
+	return vendedoraTTL
+}

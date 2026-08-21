@@ -47,6 +47,12 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (generated.GetVari
 			"No se pueden crear variantes para un modelo de envase inactivo.",
 		)
 	}
+	if !modelo.TieneVariantes {
+		return generated.GetVarianteEnvaseByIDRow{}, domainerrors.NewBusinessRule(
+			"Modelo sin variantes",
+			"Este modelo de envase es único y no admite variantes adicionales.",
+		)
+	}
 
 	exists, err := s.VariantesEnvase.ExistsColor(ctx, in.ModeloEnvaseID, in.Color, 0)
 	if err != nil {
@@ -54,8 +60,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (generated.GetVari
 	}
 	if exists {
 		return generated.GetVarianteEnvaseByIDRow{}, domainerrors.NewConflict(
-			"Color en uso",
-			"Ya existe una variante con ese color para este modelo de envase.",
+			"Grosor en uso",
+			"Ya existe una variante con ese grosor para este modelo de envase.",
 		)
 	}
 

@@ -40,7 +40,7 @@ export function VariantesEnvaseTable({
         </span>
       ),
     },
-    { key: 'color', header: 'Color', cell: (v) => v.color },
+    { key: 'color', header: 'Grosor', cell: (v) => v.color },
     {
       key: 'vitrina',
       header: 'Vitrina',

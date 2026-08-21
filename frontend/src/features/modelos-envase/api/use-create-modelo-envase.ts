@@ -11,6 +11,8 @@ export interface ModeloEnvasePayload {
   precio_solo: string;
   precio_con_fragancia: string;
   precio_recarga: string;
+  /** No editable después de creado — no se envía en update. */
+  tiene_variantes: boolean;
 }
 
 export function useCreateModeloEnvase() {

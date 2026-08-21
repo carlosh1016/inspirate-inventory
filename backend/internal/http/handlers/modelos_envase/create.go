@@ -28,6 +28,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sinVariantes := false
+	if req.TieneVariantes != nil {
+		sinVariantes = !*req.TieneVariantes
+	}
+
 	m, err := h.service.Create(r.Context(), usecase.CreateInput{
 		Tipo:               req.Tipo,
 		TamanoOz:           req.TamanoOz,
@@ -35,6 +40,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		PrecioSolo:         req.PrecioSolo,
 		PrecioConFragancia: req.PrecioConFragancia,
 		PrecioRecarga:      req.PrecioRecarga,
+		SinVariantes:       sinVariantes,
+		SedeID:             requester.SedeID,
 		RequesterID:        requester.ID,
 		IP:                 middleware.IPFromContext(r.Context()),
 		UserAgent:          middleware.UserAgentFromContext(r.Context()),

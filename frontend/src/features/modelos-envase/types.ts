@@ -7,6 +7,7 @@ export interface ModeloEnvase {
   precio_con_fragancia: string;
   precio_recarga: string;
   activo: boolean;
+  tiene_variantes: boolean;
   variantes_activas: number;
   created_at: string;
   updated_at: string;

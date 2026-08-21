@@ -104,8 +104,22 @@ export function VarianteEnvaseForm({ initialData }: { initialData?: VarianteEnva
             />
           )}
 
-          <FormField id="color" label="Color" error={errors.color?.message}>
-            <Input id="color" disabled={isSubmitting} {...register('color')} />
+          <FormField id="color" label="Grosor" error={errors.color?.message}>
+            <Input
+              id="color"
+              list="grosor-opciones"
+              placeholder="Delgado, Gordo…"
+              disabled={isSubmitting}
+              {...register('color')}
+            />
+            <datalist id="grosor-opciones">
+              <option value="Delgado" />
+              <option value="Gordo" />
+            </datalist>
+            <p className="text-xs text-muted-foreground">
+              El grosor con el que se diferencia esta variante dentro del modelo. Elige Delgado o Gordo, o escribe
+              otro si hace falta.
+            </p>
           </FormField>
 
           <FormField id="stock_minimo" label="Stock mínimo" error={errors.stock_minimo?.message}>

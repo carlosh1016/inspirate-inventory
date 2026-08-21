@@ -10,7 +10,8 @@ import { ErrorState } from '@/components/feedback/error-state';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
 import { useUrlFilters } from '@/hooks/use-url-filters';
-import { useModelosLookup } from '@/features/modelos-envase/api/use-modelos-lookup';
+import { modeloEnvaseLabel } from '@/features/modelos-envase/api/search-modelos-envase';
+import { useModelosFullLookup } from '@/features/modelos-envase/api/use-modelos-full-lookup';
 import { useVariantesEnvase } from '@/features/variantes-envase/api/use-variantes-envase';
 import { VariantesEnvaseFiltersBar } from '@/features/variantes-envase/components/variantes-envase-filters';
 import { VariantesEnvaseTable } from '@/features/variantes-envase/components/variantes-envase-table';
@@ -25,7 +26,10 @@ const nuevaButton = (
 
 function VariantesView() {
   const router = useRouter();
-  const { data: modelosMap } = useModelosLookup();
+  const { data: modelosFullMap } = useModelosFullLookup();
+  const modelosMap = new Map<number, string>(
+    [...(modelosFullMap?.entries() ?? [])].map(([id, m]) => [id, modeloEnvaseLabel(m)]),
+  );
   const { filters, setFilter } = useUrlFilters<VariantesEnvaseFilters>({
     defaults: { page: 1, q: '', modelo_envase_id: 0, activo: 'true', stock_bajo: false },
     parsers: {
@@ -45,12 +49,15 @@ function VariantesView() {
   });
 
   const { data, isLoading, isError, error, refetch } = useVariantesEnvase(filters);
+  // La variante única auto-creada para un modelo "sin variantes" (ej. envase
+  // de lujo) es plomería interna, no se gestiona a mano — no se lista aquí.
+  const items = (data?.items ?? []).filter((v) => modelosFullMap?.get(v.modelo_envase_id)?.tiene_variantes !== false);
 
   return (
     <>
       <PageHeader
         title="Variantes de envase"
-        description="Envases por color con su stock."
+        description="Envases por grosor con su stock."
         action={nuevaButton}
       />
       <EnvasesTabs />
@@ -59,7 +66,7 @@ function VariantesView() {
         <ErrorState error={error} onRetry={() => refetch()} />
       ) : (
         <VariantesEnvaseTable
-          data={data?.items ?? []}
+          data={items}
           meta={data?.meta}
           isLoading={isLoading}
           page={filters.page}

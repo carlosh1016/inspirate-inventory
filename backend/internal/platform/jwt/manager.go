@@ -29,23 +29,24 @@ var ErrInvalidToken = errors.New("invalid access token")
 
 // Manager issues and validates access tokens.
 type Manager interface {
-	GenerateAccessToken(userID int64, rol string, sedeID int64) (token string, expiresAt time.Time, err error)
+	GenerateAccessToken(userID int64, rol string, sedeID int64, ttl time.Duration) (token string, expiresAt time.Time, err error)
 	ParseAccessToken(token string) (*Claims, error)
 }
 
 type hmacManager struct {
 	secret []byte
-	ttl    time.Duration
 }
 
-// New builds an HS256 Manager. ttl is the access token lifetime.
-func New(secret string, ttl time.Duration) Manager {
-	return &hmacManager{secret: []byte(secret), ttl: ttl}
+// New builds an HS256 Manager. The access token TTL is chosen per call by
+// the caller (it varies by role — see domain/auth.AccessTokenTTL), not fixed
+// here.
+func New(secret string) Manager {
+	return &hmacManager{secret: []byte(secret)}
 }
 
-func (m *hmacManager) GenerateAccessToken(userID int64, rol string, sedeID int64) (string, time.Time, error) {
+func (m *hmacManager) GenerateAccessToken(userID int64, rol string, sedeID int64, ttl time.Duration) (string, time.Time, error) {
 	now := time.Now()
-	expiresAt := now.Add(m.ttl)
+	expiresAt := now.Add(ttl)
 
 	claims := Claims{
 		UserID: userID,

@@ -102,8 +102,10 @@ func seedMetodoPago(t *testing.T, pool *pgxpool.Pool, nombre, codigo string) int
 
 func (e *testEnv) seedFragancia(t *testing.T, nombre string, minimo float64) int64 {
 	return e.queryID(t,
-		`INSERT INTO fragancias (sede_id, nombre_comercial, genero, gramos_minimo)
-		 VALUES ($1, $2, 'femenina', $3) RETURNING id`,
+		`INSERT INTO fragancias (sede_id, nombre_comercial, genero, gramos_minimo, numero_genero)
+		 VALUES ($1, $2, 'femenina', $3,
+		   (SELECT COALESCE(MAX(numero_genero), 0) + 1 FROM fragancias WHERE sede_id = $1 AND genero = 'femenina'))
+		 RETURNING id`,
 		e.sedeID, nombre, minimo)
 }
 

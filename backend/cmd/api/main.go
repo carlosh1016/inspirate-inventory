@@ -190,7 +190,7 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 	sesionesRepo := sesionesrepo.NewPostgres(pool)
 	reportesRepo := reportesrepo.NewPostgres(pool)
 
-	jwtManager := jwt.New(cfg.JWTSecret, cfg.JWTAccessTTL)
+	jwtManager := jwt.New(cfg.JWTSecret)
 	v := validator.New()
 
 	var mailerSvc mailer.Mailer
@@ -209,6 +209,8 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 		mailerSvc,
 		ratelimit.NewLoginLimiter(),
 		ratelimit.NewPasswordResetLimiter(),
+		cfg.JWTAccessTTLAdmin,
+		cfg.JWTAccessTTLVendedora,
 		cfg.JWTRefreshTTLAdmin,
 		cfg.JWTRefreshTTLVendedora,
 		cfg.FrontendURL,
@@ -221,7 +223,7 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 	fraganciasService := usecasefragancias.NewService(pool, fraganciasRepo, stockActualRepo, auditoriaRepo)
 	fraganciasHandler := fraganciashandlers.NewHandler(fraganciasService, jwtManager, v)
 
-	modelosEnvaseService := usecasemodelosenvase.NewService(modelosEnvaseRepo, auditoriaRepo)
+	modelosEnvaseService := usecasemodelosenvase.NewService(pool, modelosEnvaseRepo, variantesEnvaseRepo, stockActualRepo, auditoriaRepo)
 	modelosEnvaseHandler := modelosenvasehandlers.NewHandler(modelosEnvaseService, jwtManager, v)
 
 	variantesEnvaseService := usecasevariantesenvase.NewService(pool, variantesEnvaseRepo, modelosEnvaseRepo, stockActualRepo, auditoriaRepo)

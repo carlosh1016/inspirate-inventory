@@ -37,9 +37,12 @@ export async function searchEnvasesVenta(
   return res.data.data.map((v) => {
     const modelo = modelosMap.get(v.modelo_envase_id);
     const modeloLabel = modelo ? modeloEnvaseLabel(modelo) : `Modelo #${v.modelo_envase_id}`;
+    // Un modelo "sin variantes" (ej. envase de lujo) tiene una única variante
+    // oculta — no se le muestra el sufijo de grosor, se elige por su nombre.
+    const label = modelo && !modelo.tiene_variantes ? modeloLabel : `${modeloLabel} · ${v.color}`;
     return {
       id: v.id,
-      label: `${modeloLabel} · ${v.color}`,
+      label,
       equiv_gramos: modelo?.equiv_gramos ?? '0',
       precio_solo: modelo?.precio_solo ?? '0',
       precio_con_fragancia: modelo?.precio_con_fragancia ?? '0',

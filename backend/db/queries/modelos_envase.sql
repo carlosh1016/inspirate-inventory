@@ -39,8 +39,8 @@ GROUP BY m.id;
 SELECT * FROM modelos_envase WHERE id = $1;
 
 -- name: InsertModeloEnvase :one
-INSERT INTO modelos_envase (tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO modelos_envase (tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, tiene_variantes)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: UpdateModeloEnvase :one

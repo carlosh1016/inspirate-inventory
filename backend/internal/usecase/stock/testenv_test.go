@@ -50,8 +50,10 @@ func seedFragancia(t *testing.T, env *testEnv, nombre string, activo bool) int64
 	t.Helper()
 	var id int64
 	err := env.pool.QueryRow(context.Background(),
-		`INSERT INTO fragancias (sede_id, nombre_comercial, genero, gramos_minimo, activo)
-		 VALUES ($1, $2, 'masculina', 10.00, $3) RETURNING id`,
+		`INSERT INTO fragancias (sede_id, nombre_comercial, genero, gramos_minimo, activo, numero_genero)
+		 VALUES ($1, $2, 'masculina', 10.00, $3,
+		   (SELECT COALESCE(MAX(numero_genero), 0) + 1 FROM fragancias WHERE sede_id = $1 AND genero = 'masculina'))
+		 RETURNING id`,
 		env.sedeID, nombre, activo,
 	).Scan(&id)
 	if err != nil {

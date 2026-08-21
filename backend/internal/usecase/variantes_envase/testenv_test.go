@@ -86,6 +86,23 @@ func seedModeloEnvase(t *testing.T, pool *pgxpool.Pool, tipo, tamanoOz string, a
 	return id
 }
 
+// seedModeloEnvaseSinVariantes inserts a tiene_variantes=false modelo_envase
+// row directly via SQL, to test that variantes_envase.Create refuses to add
+// a manual variante to a modelo like "envase de lujo".
+func seedModeloEnvaseSinVariantes(t *testing.T, pool *pgxpool.Pool, tipo, tamanoOz string) int64 {
+	t.Helper()
+	var id int64
+	err := pool.QueryRow(context.Background(),
+		`INSERT INTO modelos_envase (tipo, tamano_oz, equiv_gramos, precio_solo, precio_con_fragancia, precio_recarga, tiene_variantes)
+		 VALUES ($1, $2::numeric, 50.00, 10000.00, 25000.00, 15000.00, false) RETURNING id`,
+		tipo, tamanoOz,
+	).Scan(&id)
+	if err != nil {
+		t.Fatalf("seeding modelo_envase sin variantes: %v", err)
+	}
+	return id
+}
+
 // setStock overwrites the vitrina stock row cantidad for a variante_envase,
 // used to exercise the delete-with-stock scenario without going through
 // Tanda 3's (not-yet-built) movimientos usecase.

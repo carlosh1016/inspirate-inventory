@@ -8,24 +8,45 @@ import (
 	"encoding/json"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	domainerrors "github.com/carlosh1016/inspirate-inventory/backend/internal/domain/errors"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/auditoria"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/generated"
 	repo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/modelos_envase"
+	stockactual "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/stock_actual"
+	variantesenvase "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/variantes_envase"
 )
 
 const modelosEnvaseTable = "modelos_envase"
 
+// varianteUnicaGrosor is the sentinel "grosor" stored for the single hidden
+// variante auto-created when a modelo is marked tiene_variantes=false (e.g.
+// "envase de lujo"). It's never shown to the user — the UI skips the
+// grosor-selection step entirely for such modelos.
+const varianteUnicaGrosor = "Único"
+
 // Service groups every modelos_envase usecase behind one set of
-// dependencies.
+// dependencies. Pool is used only to open transactions for Create, when a
+// modelo is created without variantes and its single hidden variante_envase
+// must be inserted (plus its stock seeded) atomically alongside it.
 type Service struct {
-	ModelosEnvase repo.Repository
-	Auditoria     auditoria.Repository
+	Pool            *pgxpool.Pool
+	ModelosEnvase   repo.Repository
+	VariantesEnvase variantesenvase.Repository
+	StockActual     stockactual.Repository
+	Auditoria       auditoria.Repository
 }
 
 // NewService builds a Service with all its dependencies.
-func NewService(modelosEnvaseRepo repo.Repository, auditoriaRepo auditoria.Repository) *Service {
-	return &Service{ModelosEnvase: modelosEnvaseRepo, Auditoria: auditoriaRepo}
+func NewService(pool *pgxpool.Pool, modelosEnvaseRepo repo.Repository, variantesEnvaseRepo variantesenvase.Repository, stockActualRepo stockactual.Repository, auditoriaRepo auditoria.Repository) *Service {
+	return &Service{
+		Pool:            pool,
+		ModelosEnvase:   modelosEnvaseRepo,
+		VariantesEnvase: variantesEnvaseRepo,
+		StockActual:     stockActualRepo,
+		Auditoria:       auditoriaRepo,
+	}
 }
 
 // auditSnapshot is what gets JSON-encoded into datos_antes/datos_despues.
@@ -38,6 +59,7 @@ type auditSnapshot struct {
 	PrecioConFragancia string `json:"precio_con_fragancia"`
 	PrecioRecarga      string `json:"precio_recarga"`
 	Activo             bool   `json:"activo"`
+	TieneVariantes     bool   `json:"tiene_variantes"`
 }
 
 func snapshot(m generated.ModelosEnvase) auditSnapshot {
@@ -50,6 +72,7 @@ func snapshot(m generated.ModelosEnvase) auditSnapshot {
 		PrecioConFragancia: m.PrecioConFragancia.String(),
 		PrecioRecarga:      m.PrecioRecarga.String(),
 		Activo:             m.Activo,
+		TieneVariantes:     m.TieneVariantes,
 	}
 }
 

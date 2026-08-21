@@ -36,6 +36,8 @@ type Service struct {
 	LoginLimiter   ratelimit.Limiter
 	ResetLimiter   ratelimit.Limiter
 
+	JWTAccessTTLAdmin      time.Duration
+	JWTAccessTTLVendedora  time.Duration
 	JWTRefreshTTLAdmin     time.Duration
 	JWTRefreshTTLVendedora time.Duration
 	FrontendURL            string
@@ -50,6 +52,7 @@ func NewService(
 	jwtManager jwt.Manager,
 	mailerSvc mailer.Mailer,
 	loginLimiter, resetLimiter ratelimit.Limiter,
+	accessTTLAdmin, accessTTLVendedora time.Duration,
 	refreshTTLAdmin, refreshTTLVendedora time.Duration,
 	frontendURL string,
 ) *Service {
@@ -62,6 +65,8 @@ func NewService(
 		Mailer:                 mailerSvc,
 		LoginLimiter:           loginLimiter,
 		ResetLimiter:           resetLimiter,
+		JWTAccessTTLAdmin:      accessTTLAdmin,
+		JWTAccessTTLVendedora:  accessTTLVendedora,
 		JWTRefreshTTLAdmin:     refreshTTLAdmin,
 		JWTRefreshTTLVendedora: refreshTTLVendedora,
 		FrontendURL:            frontendURL,
@@ -71,7 +76,8 @@ func NewService(
 // issueSession generates a fresh access+refresh token pair for user and
 // persists the refresh token's hash.
 func (s *Service) issueSession(ctx context.Context, user generated.Usuario, ip, userAgent string) (domainauth.Session, error) {
-	accessToken, accessExpiresAt, err := s.JWT.GenerateAccessToken(user.ID, string(user.Rol), user.SedeID)
+	accessTTL := domainauth.AccessTokenTTL(string(user.Rol), s.JWTAccessTTLAdmin, s.JWTAccessTTLVendedora)
+	accessToken, accessExpiresAt, err := s.JWT.GenerateAccessToken(user.ID, string(user.Rol), user.SedeID, accessTTL)
 	if err != nil {
 		return domainauth.Session{}, internalErr(err)
 	}

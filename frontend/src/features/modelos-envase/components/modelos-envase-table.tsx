@@ -57,7 +57,12 @@ const columns: Column<ModeloEnvase>[] = [
     header: 'Variantes',
     className: 'text-right tabular-nums',
     headerClassName: 'text-right',
-    cell: (m) => m.variantes_activas,
+    cell: (m) =>
+      m.tiene_variantes ? (
+        m.variantes_activas
+      ) : (
+        <span className="text-xs text-muted-foreground">Único</span>
+      ),
   },
 ];
 

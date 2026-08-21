@@ -9,6 +9,7 @@ export const modeloEnvaseSchema = z.object({
   precio_solo: numeric,
   precio_con_fragancia: numeric,
   precio_recarga: numeric,
+  tiene_variantes: z.boolean(),
 });
 
 export type ModeloEnvaseInput = z.infer<typeof modeloEnvaseSchema>;

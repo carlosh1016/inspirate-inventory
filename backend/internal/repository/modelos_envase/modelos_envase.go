@@ -43,7 +43,7 @@ type Repository interface {
 	GetByIDIncludingDeleted(ctx context.Context, id int64) (generated.ModelosEnvase, error)
 	ExistsTipoTamano(ctx context.Context, tipo, tamanoOz string, excludeID int64) (bool, error)
 	CountVariantesActivas(ctx context.Context, modeloEnvaseID int64) (int64, error)
-	Insert(ctx context.Context, tipo, tamanoOz, equivGramos, precioSolo, precioConFragancia, precioRecarga string) (generated.ModelosEnvase, error)
+	Insert(ctx context.Context, tipo, tamanoOz, equivGramos, precioSolo, precioConFragancia, precioRecarga string, tieneVariantes bool) (generated.ModelosEnvase, error)
 	Update(ctx context.Context, id int64, fields UpdateFields) (generated.ModelosEnvase, error)
 	SoftDelete(ctx context.Context, id int64) error
 }

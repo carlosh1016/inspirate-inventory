@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { getErrorMessage } from '@/lib/errors';
 import type { TipoItem, Ubicacion } from '@/types/domain';
+import { useModelosFullLookup } from '@/features/modelos-envase/api/use-modelos-full-lookup';
 import { searchCatalogItems, type CatalogItemOption } from '../api/search-items';
 
 export interface SingleMovimientoValues {
@@ -63,6 +64,7 @@ export function SingleMovimientoForm({
   const [motivo, setMotivo] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
+  const { data: modelosMap } = useModelosFullLookup();
 
   const validate = (): Errors => {
     const e: Errors = {};
@@ -122,7 +124,7 @@ export function SingleMovimientoForm({
                 setItemId(id ?? 0);
                 setItemNombre(label);
               }}
-              searchFn={(q) => searchCatalogItems(tipoItem as TipoItem, q)}
+              searchFn={(q) => searchCatalogItems(tipoItem as TipoItem, q, modelosMap)}
               disabled={!tipoItem}
               placeholder={tipoItem ? 'Buscar ítem…' : 'Elige un tipo primero'}
               renderOption={(o) => (

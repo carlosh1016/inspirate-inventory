@@ -72,6 +72,23 @@ func TestCreateWithInactiveModeloFails(t *testing.T) {
 	assertCode(t, err, domainerrors.CodeBusinessRule)
 }
 
+func TestCreateForModeloSinVariantesFails(t *testing.T) {
+	env := newTestEnv(t)
+	ctx := context.Background()
+	modeloID := seedModeloEnvaseSinVariantes(t, env.pool, "Envase de lujo", "1.00")
+
+	_, err := env.service.Create(ctx, usecase.CreateInput{
+		SedeID:         env.sedeID,
+		ModeloEnvaseID: modeloID,
+		Color:          "Delgado",
+		RequesterID:    env.requesterID,
+	})
+	if err == nil {
+		t.Fatal("expected a business_rule error, got nil")
+	}
+	assertCode(t, err, domainerrors.CodeBusinessRule)
+}
+
 func TestCreateWithUnknownModeloFails(t *testing.T) {
 	env := newTestEnv(t)
 
