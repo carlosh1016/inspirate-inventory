@@ -7,7 +7,7 @@ set -e
 
 SERVER_IP=$1
 SSH_USER="ubuntu"
-SSH_KEY="~/.ssh/id_rsa"  # Ajustar si tu key tiene otro nombre
+SSH_KEY="$HOME/.ssh/oracle_vm"  # Ajustar si tu key tiene otro nombre
 DEPLOY_DIR="/opt/inspirate"
 
 if [ -z "$SERVER_IP" ]; then
@@ -17,7 +17,7 @@ fi
 
 echo "1. Compilando binario para Linux amd64..."
 cd backend
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/server ./cmd/api
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/server ./cmd/api
 cd ..
 
 echo "2. Subiendo binario al servidor..."
