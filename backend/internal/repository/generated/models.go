@@ -58,6 +58,48 @@ func (ns NullCategoriaProductoEnum) Value() (driver.Value, error) {
 	return string(ns.CategoriaProductoEnum), nil
 }
 
+type EstadoConteoEnum string
+
+const (
+	EstadoConteoEnumAbierto EstadoConteoEnum = "abierto"
+	EstadoConteoEnumCerrado EstadoConteoEnum = "cerrado"
+)
+
+func (e *EstadoConteoEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EstadoConteoEnum(s)
+	case string:
+		*e = EstadoConteoEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EstadoConteoEnum: %T", src)
+	}
+	return nil
+}
+
+type NullEstadoConteoEnum struct {
+	EstadoConteoEnum EstadoConteoEnum `json:"estado_conteo_enum"`
+	Valid            bool             `json:"valid"` // Valid is true if EstadoConteoEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEstadoConteoEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.EstadoConteoEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EstadoConteoEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEstadoConteoEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EstadoConteoEnum), nil
+}
+
 type EstadoCuadreEnum string
 
 const (
@@ -381,6 +423,29 @@ type Consignacione struct {
 	Banco        pgtype.Text        `json:"banco"`
 	Referencia   pgtype.Text        `json:"referencia"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type ConteoInventarioItem struct {
+	ID            int64               `json:"id"`
+	ConteoID      int64               `json:"conteo_id"`
+	FraganciaID   int64               `json:"fragancia_id"`
+	SaldoInicial  decimal.Decimal     `json:"saldo_inicial"`
+	GramosSistema decimal.Decimal     `json:"gramos_sistema"`
+	GramosFisico  decimal.NullDecimal `json:"gramos_fisico"`
+	CreatedAt     pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz  `json:"updated_at"`
+}
+
+type ConteosInventario struct {
+	ID                  int64              `json:"id"`
+	SedeID              int64              `json:"sede_id"`
+	Periodo             pgtype.Date        `json:"periodo"`
+	Estado              EstadoConteoEnum   `json:"estado"`
+	CreadoPorUsuarioID  int64              `json:"creado_por_usuario_id"`
+	CerradoPorUsuarioID pgtype.Int8        `json:"cerrado_por_usuario_id"`
+	CerradoAt           pgtype.Timestamptz `json:"cerrado_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 type CuadresCaja struct {

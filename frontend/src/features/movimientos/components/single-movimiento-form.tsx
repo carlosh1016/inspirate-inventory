@@ -16,6 +16,7 @@ import { getErrorMessage } from '@/lib/errors';
 import type { TipoItem, Ubicacion } from '@/types/domain';
 import { useModelosFullLookup } from '@/features/modelos-envase/api/use-modelos-full-lookup';
 import { searchCatalogItems, type CatalogItemOption } from '../api/search-items';
+import { FraganciaGeneroPicker } from './fragancia-genero-picker';
 
 export interface SingleMovimientoValues {
   tipo_item: TipoItem;
@@ -115,27 +116,39 @@ export function SingleMovimientoForm({
             placeholder="Tipo de ítem…"
             error={errors.tipo_item}
           />
-          <div className="space-y-2">
-            <Label>Ítem</Label>
-            <Combobox<CatalogItemOption>
-              value={itemId > 0 ? itemId : null}
-              selectedLabel={itemNombre}
-              onChange={(id, label) => {
-                setItemId(id ?? 0);
-                setItemNombre(label);
-              }}
-              searchFn={(q) => searchCatalogItems(tipoItem as TipoItem, q, modelosMap)}
-              disabled={!tipoItem}
-              placeholder={tipoItem ? 'Buscar ítem…' : 'Elige un tipo primero'}
-              renderOption={(o) => (
-                <span>
-                  <span className="font-medium">{o.label}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{o.detail}</span>
-                </span>
-              )}
-            />
-            <FormError message={errors.item_id} />
-          </div>
+          {tipoItem === 'fragancia' ? (
+            <div key="fragancia" className="sm:col-span-2">
+              <FraganciaGeneroPicker
+                onChange={(id, label) => {
+                  setItemId(id ?? 0);
+                  setItemNombre(label);
+                }}
+                error={errors.item_id}
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Ítem</Label>
+              <Combobox<CatalogItemOption>
+                value={itemId > 0 ? itemId : null}
+                selectedLabel={itemNombre}
+                onChange={(id, label) => {
+                  setItemId(id ?? 0);
+                  setItemNombre(label);
+                }}
+                searchFn={(q) => searchCatalogItems(tipoItem as TipoItem, q, modelosMap)}
+                disabled={!tipoItem}
+                placeholder={tipoItem ? 'Buscar ítem…' : 'Elige un tipo primero'}
+                renderOption={(o) => (
+                  <span>
+                    <span className="font-medium">{o.label}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{o.detail}</span>
+                  </span>
+                )}
+              />
+              <FormError message={errors.item_id} />
+            </div>
+          )}
         </div>
 
         <SelectField

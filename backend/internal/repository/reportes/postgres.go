@@ -2,10 +2,18 @@ package reportes
 
 import (
 	"context"
+	"errors"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	repo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/generated"
 )
+
+// ErrNotFound is returned when the requested conteo doesn't exist for the
+// given sede.
+var ErrNotFound = errors.New("conteo not found")
 
 type postgresRepository struct {
 	q *generated.Queries
@@ -361,6 +369,40 @@ func (r *postgresRepository) SesionesDetalle(ctx context.Context, f RangoFiltro)
 			EntradaAt:       row.EntradaAt.Time,
 			SalidaAt:        repo.TimePtr(row.SalidaAt),
 			HorasTrabajadas: repo.IntervalToDuration(row.HorasTrabajadas),
+		})
+	}
+	return out, nil
+}
+
+func (r *postgresRepository) ConteoInventarioPeriodo(ctx context.Context, f ConteoInventarioFiltro) (time.Time, error) {
+	periodo, err := r.q.ReporteConteoInventario(ctx, generated.ReporteConteoInventarioParams{
+		ConteoID: f.ConteoID,
+		SedeID:   f.SedeID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return time.Time{}, ErrNotFound
+		}
+		return time.Time{}, err
+	}
+	return periodo.Time, nil
+}
+
+func (r *postgresRepository) ConteoInventarioItems(ctx context.Context, f ConteoInventarioFiltro) ([]ConteoInventarioItem, error) {
+	rows, err := r.q.ReporteConteoInventarioItems(ctx, generated.ReporteConteoInventarioItemsParams{
+		ConteoID: f.ConteoID,
+		SedeID:   f.SedeID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ConteoInventarioItem, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, ConteoInventarioItem{
+			FraganciaNombre: row.FraganciaNombre,
+			SaldoInicial:    row.SaldoInicial,
+			GramosSistema:   row.GramosSistema,
+			GramosFisico:    row.GramosFisico,
 		})
 	}
 	return out, nil

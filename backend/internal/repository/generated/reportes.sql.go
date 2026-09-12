@@ -12,6 +12,75 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const reporteConteoInventario = `-- name: ReporteConteoInventario :one
+
+SELECT periodo FROM conteos_inventario WHERE id = $1::bigint AND sede_id = $2::bigint
+`
+
+type ReporteConteoInventarioParams struct {
+	ConteoID int64 `json:"conteo_id"`
+	SedeID   int64 `json:"sede_id"`
+}
+
+// ===========================================================================
+// CONTEO MENSUAL DE INVENTARIO
+// ===========================================================================
+func (q *Queries) ReporteConteoInventario(ctx context.Context, arg ReporteConteoInventarioParams) (pgtype.Date, error) {
+	row := q.db.QueryRow(ctx, reporteConteoInventario, arg.ConteoID, arg.SedeID)
+	var periodo pgtype.Date
+	err := row.Scan(&periodo)
+	return periodo, err
+}
+
+const reporteConteoInventarioItems = `-- name: ReporteConteoInventarioItems :many
+SELECT f.nombre_comercial AS fragancia_nombre,
+       cii.saldo_inicial,
+       cii.gramos_sistema,
+       cii.gramos_fisico
+FROM conteo_inventario_items cii
+INNER JOIN fragancias f ON f.id = cii.fragancia_id
+INNER JOIN conteos_inventario c ON c.id = cii.conteo_id
+WHERE cii.conteo_id = $1::bigint AND c.sede_id = $2::bigint
+ORDER BY f.nombre_comercial ASC
+`
+
+type ReporteConteoInventarioItemsParams struct {
+	ConteoID int64 `json:"conteo_id"`
+	SedeID   int64 `json:"sede_id"`
+}
+
+type ReporteConteoInventarioItemsRow struct {
+	FraganciaNombre string              `json:"fragancia_nombre"`
+	SaldoInicial    decimal.Decimal     `json:"saldo_inicial"`
+	GramosSistema   decimal.Decimal     `json:"gramos_sistema"`
+	GramosFisico    decimal.NullDecimal `json:"gramos_fisico"`
+}
+
+func (q *Queries) ReporteConteoInventarioItems(ctx context.Context, arg ReporteConteoInventarioItemsParams) ([]ReporteConteoInventarioItemsRow, error) {
+	rows, err := q.db.Query(ctx, reporteConteoInventarioItems, arg.ConteoID, arg.SedeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReporteConteoInventarioItemsRow{}
+	for rows.Next() {
+		var i ReporteConteoInventarioItemsRow
+		if err := rows.Scan(
+			&i.FraganciaNombre,
+			&i.SaldoInicial,
+			&i.GramosSistema,
+			&i.GramosFisico,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reporteCuadresCerrados = `-- name: ReporteCuadresCerrados :many
 
 SELECT c.fecha, c.estado::text AS estado, c.fondo_base,

@@ -11,6 +11,7 @@ const TABS = [
   { href: '/inventario/envases', label: 'Envases' },
   { href: '/inventario/productos', label: 'Productos' },
   { href: '/inventario/movimientos', label: 'Movimientos' },
+  { href: '/inventario/conteo-mensual', label: 'Conteo mensual' },
   { href: '/inventario/alertas', label: 'Alertas' },
 ];
 

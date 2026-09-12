@@ -1,6 +1,6 @@
 import type { ComboboxOption } from '@/components/forms/combobox';
 import { api } from '@/lib/api';
-import { formatGramos } from '@/lib/formatters';
+import { formatCodigoFragancia, formatGramos } from '@/lib/formatters';
 import type { ApiListEnvelope } from '@/types/api';
 import type { TipoItem } from '@/types/domain';
 import type { Fragancia } from '@/features/fragancias/types';
@@ -31,7 +31,7 @@ export async function searchCatalogItems(
     });
     return res.data.data.map((f) => ({
       id: f.id,
-      label: f.nombre_comercial,
+      label: `${formatCodigoFragancia(f.genero, f.numero_genero)} · ${f.nombre_comercial}`,
       detail: `Vitrina ${formatGramos(f.stock.vitrina)} · Bodega ${formatGramos(f.stock.bodega)}`,
     }));
   }

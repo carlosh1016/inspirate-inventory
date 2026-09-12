@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import type { TipoItem, Ubicacion } from '@/types/domain';
 import { useModelosFullLookup } from '@/features/modelos-envase/api/use-modelos-full-lookup';
 import { searchCatalogItems, type CatalogItemOption } from '../api/search-items';
+import { FraganciaGeneroPicker } from './fragancia-genero-picker';
 
 export interface MovimientoItemInput {
   tipo_item: '' | TipoItem;
@@ -87,26 +88,37 @@ export function MovimientoItemForm({
           error={errors?.tipo_item}
         />
 
-        <div className="space-y-2">
-          <Label>Ítem</Label>
-          <Combobox<CatalogItemOption>
-            value={value.item_id > 0 ? value.item_id : null}
-            selectedLabel={value.item_nombre || null}
-            onChange={(id, label) =>
-              onChange({ ...value, item_id: id ?? 0, item_nombre: label ?? '' })
-            }
-            searchFn={(q) => searchCatalogItems(value.tipo_item as TipoItem, q, modelosMap)}
-            disabled={!value.tipo_item}
-            placeholder={value.tipo_item ? 'Buscar ítem…' : 'Elige un tipo primero'}
-            renderOption={(o) => (
-              <span>
-                <span className="font-medium">{o.label}</span>
-                <span className="ml-2 text-xs text-muted-foreground">{o.detail}</span>
-              </span>
-            )}
-          />
-          <FormError message={errors?.item_id} />
-        </div>
+        {isFragancia ? (
+          <div key="fragancia" className="sm:col-span-2">
+            <FraganciaGeneroPicker
+              onChange={(id, label) =>
+                onChange({ ...value, item_id: id ?? 0, item_nombre: label ?? '' })
+              }
+              error={errors?.item_id}
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>Ítem</Label>
+            <Combobox<CatalogItemOption>
+              value={value.item_id > 0 ? value.item_id : null}
+              selectedLabel={value.item_nombre || null}
+              onChange={(id, label) =>
+                onChange({ ...value, item_id: id ?? 0, item_nombre: label ?? '' })
+              }
+              searchFn={(q) => searchCatalogItems(value.tipo_item as TipoItem, q, modelosMap)}
+              disabled={!value.tipo_item}
+              placeholder={value.tipo_item ? 'Buscar ítem…' : 'Elige un tipo primero'}
+              renderOption={(o) => (
+                <span>
+                  <span className="font-medium">{o.label}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{o.detail}</span>
+                </span>
+              )}
+            />
+            <FormError message={errors?.item_id} />
+          </div>
+        )}
 
         {showUbicacion && (
           <SelectField

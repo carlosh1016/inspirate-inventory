@@ -15,6 +15,7 @@ import (
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers"
 	auditoriahandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auditoria"
 	authhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auth"
+	conteoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/conteos"
 	cuadreshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/cuadres"
 	fraganciashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/fragancias"
 	metodospagohandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/metodos_pago"
@@ -48,6 +49,7 @@ func NewRouter(
 	movimientosHandler *movimientoshandlers.Handler,
 	ventasHandler *ventashandlers.Handler,
 	cuadresHandler *cuadreshandlers.Handler,
+	conteosHandler *conteoshandlers.Handler,
 	sesionesHandler *sesioneshandlers.Handler,
 	reportesHandler *reporteshandlers.Handler,
 	auditoriaHandler *auditoriahandlers.Handler,
@@ -83,6 +85,7 @@ func NewRouter(
 		movimientosHandler.Router(r)
 		ventasHandler.Router(r)
 		cuadresHandler.Router(r)
+		conteosHandler.Router(r)
 		sesionesHandler.Router(r)
 		reportesHandler.Router(r)
 		auditoriaHandler.Router(r)

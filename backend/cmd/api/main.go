@@ -18,6 +18,7 @@ import (
 	apphttp "github.com/carlosh1016/inspirate-inventory/backend/internal/http"
 	auditoriahandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auditoria"
 	authhandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/auth"
+	conteoshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/conteos"
 	cuadreshandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/cuadres"
 	fraganciashandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/fragancias"
 	metodospagohandlers "github.com/carlosh1016/inspirate-inventory/backend/internal/http/handlers/metodos_pago"
@@ -39,6 +40,7 @@ import (
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/platform/validator"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/auditoria"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/consignaciones"
+	conteosrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/conteos"
 	cuadresrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/cuadres"
 	"github.com/carlosh1016/inspirate-inventory/backend/internal/repository/fragancias"
 	idempotencykeys "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/idempotency_keys"
@@ -58,6 +60,7 @@ import (
 	ventasrepo "github.com/carlosh1016/inspirate-inventory/backend/internal/repository/ventas"
 	usecaseauditoria "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/auditoria"
 	usecaseauth "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/auth"
+	usecaseconteos "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/conteos"
 	usecasecuadres "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/cuadres"
 	usecasefragancias "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/fragancias"
 	usecasemetodospago "github.com/carlosh1016/inspirate-inventory/backend/internal/usecase/metodos_pago"
@@ -97,9 +100,9 @@ func run() error {
 	}
 	defer pool.Close()
 
-	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, reportesHandler, auditoriaHandler, idempotencyKeysRepo := buildHandlers(cfg, pool, log)
+	authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, conteosHandler, sesionesHandler, reportesHandler, auditoriaHandler, idempotencyKeysRepo := buildHandlers(cfg, pool, log)
 
-	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, reportesHandler, auditoriaHandler)
+	router := apphttp.NewRouter(cfg, log, pool, authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, conteosHandler, sesionesHandler, reportesHandler, auditoriaHandler)
 	server := apphttp.NewServer(cfg.Port, router)
 
 	go runIdempotencyKeyCleanup(ctx, idempotencyKeysRepo, log)
@@ -169,7 +172,7 @@ func resolveBogotaLocation(log *slog.Logger) *time.Location {
 	return loc
 }
 
-func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler, *ventashandlers.Handler, *cuadreshandlers.Handler, *sesioneshandlers.Handler, *reporteshandlers.Handler, *auditoriahandlers.Handler, idempotencykeys.Repository) {
+func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*authhandlers.Handler, *usuarioshandlers.Handler, *fraganciashandlers.Handler, *modelosenvasehandlers.Handler, *variantesenvasehandlers.Handler, *productoshandlers.Handler, *metodospagohandlers.Handler, *stockhandlers.Handler, *movimientoshandlers.Handler, *ventashandlers.Handler, *cuadreshandlers.Handler, *conteoshandlers.Handler, *sesioneshandlers.Handler, *reporteshandlers.Handler, *auditoriahandlers.Handler, idempotencykeys.Repository) {
 	usuariosRepo := usuarios.NewPostgres(pool)
 	refreshTokensRepo := refreshtokens.NewPostgres(pool)
 	passwordResetsRepo := passwordresets.NewPostgres(pool)
@@ -185,6 +188,7 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 	ventaItemsRepo := ventaitems.NewPostgres(pool)
 	idempotencyKeysRepo := idempotencykeys.NewPostgres(pool)
 	cuadresRepo := cuadresrepo.NewPostgres(pool)
+	conteosRepo := conteosrepo.NewPostgres(pool)
 	pagosCajaRepo := pagoscaja.NewPostgres(pool)
 	consignacionesRepo := consignaciones.NewPostgres(pool)
 	sesionesRepo := sesionesrepo.NewPostgres(pool)
@@ -264,6 +268,9 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 	cuadresService := usecasecuadres.NewService(pool, cuadresRepo, pagosCajaRepo, consignacionesRepo, usuariosRepo, auditoriaRepo, resolveBogotaLocation(log))
 	cuadresHandler := cuadreshandlers.NewHandler(cuadresService, jwtManager, v)
 
+	conteosService := usecaseconteos.NewService(pool, conteosRepo, auditoriaRepo, resolveBogotaLocation(log))
+	conteosHandler := conteoshandlers.NewHandler(conteosService, jwtManager, v)
+
 	sesionesService := usecasesesiones.NewService(sesionesRepo, usuariosRepo, auditoriaRepo, resolveBogotaLocation(log))
 	sesionesHandler := sesioneshandlers.NewHandler(sesionesService, jwtManager, v)
 
@@ -273,5 +280,5 @@ func buildHandlers(cfg *config.Config, pool *pgxpool.Pool, log *slog.Logger) (*a
 	auditoriaService := usecaseauditoria.NewService(auditoriaRepo)
 	auditoriaHandler := auditoriahandlers.NewHandler(auditoriaService, jwtManager)
 
-	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, sesionesHandler, reportesHandler, auditoriaHandler, idempotencyKeysRepo
+	return authHandler, usuariosHandler, fraganciasHandler, modelosEnvaseHandler, variantesEnvaseHandler, productosHandler, metodosPagoHandler, stockHandler, movimientosHandler, ventasHandler, cuadresHandler, conteosHandler, sesionesHandler, reportesHandler, auditoriaHandler, idempotencyKeysRepo
 }

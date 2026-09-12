@@ -203,6 +203,22 @@ type SesionDetalle struct {
 	HorasTrabajadas *time.Duration
 }
 
+// ConteoInventarioFiltro scopes the conteo mensual de inventario report to
+// one conteo, verifying it belongs to sedeID.
+type ConteoInventarioFiltro struct {
+	SedeID   int64
+	ConteoID int64
+}
+
+// ConteoInventarioItem is one fragancia row of the conteo mensual de
+// inventario report.
+type ConteoInventarioItem struct {
+	FraganciaNombre string
+	SaldoInicial    decimal.Decimal
+	GramosSistema   decimal.Decimal
+	GramosFisico    decimal.NullDecimal
+}
+
 // Repository is the persistence port for report datasets.
 type Repository interface {
 	VentasResumen(ctx context.Context, f RangoFiltro) (VentasResumen, error)
@@ -223,4 +239,10 @@ type Repository interface {
 
 	SesionesResumen(ctx context.Context, f RangoFiltro) ([]SesionResumen, error)
 	SesionesDetalle(ctx context.Context, f RangoFiltro) ([]SesionDetalle, error)
+
+	// ConteoInventarioPeriodo returns the conteo's periodo, verifying it
+	// exists for f.SedeID — used to name the downloaded file and to 404 a
+	// conteo from another sede before ConteoInventarioItems runs.
+	ConteoInventarioPeriodo(ctx context.Context, f ConteoInventarioFiltro) (time.Time, error)
+	ConteoInventarioItems(ctx context.Context, f ConteoInventarioFiltro) ([]ConteoInventarioItem, error)
 }

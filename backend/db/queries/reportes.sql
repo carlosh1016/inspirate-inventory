@@ -308,3 +308,21 @@ WHERE s.sede_id = @sede_id::bigint
   AND s.entrada_at <= @fecha_hasta::timestamptz
   AND (@usuario_id::bigint = 0 OR s.usuario_id = @usuario_id)
 ORDER BY u.nombre_completo ASC, s.entrada_at ASC;
+
+-- ===========================================================================
+-- CONTEO MENSUAL DE INVENTARIO
+-- ===========================================================================
+
+-- name: ReporteConteoInventario :one
+SELECT periodo FROM conteos_inventario WHERE id = @conteo_id::bigint AND sede_id = @sede_id::bigint;
+
+-- name: ReporteConteoInventarioItems :many
+SELECT f.nombre_comercial AS fragancia_nombre,
+       cii.saldo_inicial,
+       cii.gramos_sistema,
+       cii.gramos_fisico
+FROM conteo_inventario_items cii
+INNER JOIN fragancias f ON f.id = cii.fragancia_id
+INNER JOIN conteos_inventario c ON c.id = cii.conteo_id
+WHERE cii.conteo_id = @conteo_id::bigint AND c.sede_id = @sede_id::bigint
+ORDER BY f.nombre_comercial ASC;

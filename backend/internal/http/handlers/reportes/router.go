@@ -18,5 +18,6 @@ func (h *Handler) Router(r chi.Router) {
 		r.Get("/movimientos", h.Movimientos)
 		r.Get("/cuadres-caja", h.Cuadres)
 		r.Get("/sesiones-laborales", h.Sesiones)
+		r.Get("/conteos-inventario/{id}", h.ConteoInventario)
 	})
 }

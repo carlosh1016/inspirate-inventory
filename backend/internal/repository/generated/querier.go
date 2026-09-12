@@ -7,15 +7,18 @@ package generated
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )
 
 type Querier interface {
 	ActivateUsuario(ctx context.Context, id int64) error
+	CerrarConteo(ctx context.Context, arg CerrarConteoParams) (ConteosInventario, error)
 	CerrarSesion(ctx context.Context, arg CerrarSesionParams) (SesionesLaborale, error)
 	CountActiveAdmins(ctx context.Context) (int64, error)
 	// Espejo exacto de los filtros de ListAuditoriaPaginated.
 	CountAuditoria(ctx context.Context, arg CountAuditoriaParams) (int64, error)
+	CountConteos(ctx context.Context, sedeID int64) (int64, error)
 	// Mismos filtros que ListCuadresPaginated (sin joins ni columnas extra).
 	CountCuadres(ctx context.Context, arg CountCuadresParams) (int64, error)
 	// Mirrors ListFraganciasPaginated's GROUP BY/HAVING (stock_bajo needs it),
@@ -63,10 +66,23 @@ type Querier interface {
 	ExistsModeloEnvaseTipoTamano(ctx context.Context, arg ExistsModeloEnvaseTipoTamanoParams) (bool, error)
 	ExistsProductoNombreCategoria(ctx context.Context, arg ExistsProductoNombreCategoriaParams) (bool, error)
 	ExistsVarianteEnvaseColor(ctx context.Context, arg ExistsVarianteEnvaseColorParams) (bool, error)
+	// Crea una fila por cada fragancia activa de la sede. gramos_sistema sale del
+	// stock_actual agregado (bodega+vitrina). saldo_inicial es la base del
+	// periodo (el gramos_fisico del conteo cerrado del mes anterior, o —si es el
+	// primer conteo de esa fragancia— el stock reconstruido al inicio del mes
+	// restando del stock actual todos los movimientos de este mes, ya que todo
+	// movimiento en movimientos_inventario guarda un delta con signo) MÁS las
+	// entradas de mercancía (compras) registradas durante este mismo mes: si se
+	// compra más producto a mitad de mes, esa cantidad se suma al saldo inicial
+	// en vez de perderse en el stock actual, para que el % vendido siga
+	// reflejando cuánto se vendió sobre el total realmente disponible ese mes.
+	GenerarItemsConteo(ctx context.Context, arg GenerarItemsConteoParams) error
 	GetAccionesDistintas(ctx context.Context) ([]string, error)
 	GetAuditoriaByID(ctx context.Context, id int64) (GetAuditoriaByIDRow, error)
 	GetConsignacionByID(ctx context.Context, id int64) (Consignacione, error)
 	GetConsignacionesByCuadre(ctx context.Context, cuadreCajaID int64) ([]GetConsignacionesByCuadreRow, error)
+	GetConteoByID(ctx context.Context, id int64) (GetConteoByIDRow, error)
+	GetConteoBySedePeriodo(ctx context.Context, arg GetConteoBySedePeriodoParams) (ConteosInventario, error)
 	// Most recent still-open cuadre strictly before fecha, for the "opened a
 	// new day while yesterday's is still open" soft warning.
 	GetCuadreAbiertoAnterior(ctx context.Context, arg GetCuadreAbiertoAnteriorParams) (CuadresCaja, error)
@@ -109,6 +125,7 @@ type Querier interface {
 	HardDeleteMetodoPago(ctx context.Context, id int64) error
 	InsertAuditoria(ctx context.Context, arg InsertAuditoriaParams) error
 	InsertConsignacion(ctx context.Context, arg InsertConsignacionParams) (Consignacione, error)
+	InsertConteo(ctx context.Context, arg InsertConteoParams) (ConteosInventario, error)
 	InsertCuadre(ctx context.Context, arg InsertCuadreParams) (CuadresCaja, error)
 	InsertFragancia(ctx context.Context, arg InsertFraganciaParams) (Fragancia, error)
 	InsertIdempotencyKey(ctx context.Context, arg InsertIdempotencyKeyParams) error
@@ -128,6 +145,8 @@ type Querier interface {
 	// usuario_nombre viene de un LEFT JOIN (usuario_id puede ser NULL, p.ej. en
 	// login_failed sin correo válido) → sqlc lo infiere nullable (pgtype.Text).
 	ListAuditoriaPaginated(ctx context.Context, arg ListAuditoriaPaginatedParams) ([]ListAuditoriaPaginatedRow, error)
+	ListConteoItems(ctx context.Context, conteoID int64) ([]ListConteoItemsRow, error)
+	ListConteosPaginated(ctx context.Context, arg ListConteosPaginatedParams) ([]ListConteosPaginatedRow, error)
 	ListCuadresPaginated(ctx context.Context, arg ListCuadresPaginatedParams) ([]ListCuadresPaginatedRow, error)
 	ListFraganciasPaginated(ctx context.Context, arg ListFraganciasPaginatedParams) ([]ListFraganciasPaginatedRow, error)
 	ListMetodosPagoPaginated(ctx context.Context, arg ListMetodosPagoPaginatedParams) ([]MetodosPago, error)
@@ -141,6 +160,11 @@ type Querier interface {
 	ListVentasPaginated(ctx context.Context, arg ListVentasPaginatedParams) ([]ListVentasPaginatedRow, error)
 	MarkPasswordResetUsed(ctx context.Context, id int64) error
 	NextNumeroGeneroFragancia(ctx context.Context, arg NextNumeroGeneroFraganciaParams) (int32, error)
+	// ===========================================================================
+	// CONTEO MENSUAL DE INVENTARIO
+	// ===========================================================================
+	ReporteConteoInventario(ctx context.Context, arg ReporteConteoInventarioParams) (pgtype.Date, error)
+	ReporteConteoInventarioItems(ctx context.Context, arg ReporteConteoInventarioItemsParams) ([]ReporteConteoInventarioItemsRow, error)
 	// ===========================================================================
 	// CUADRES DE CAJA (solo cerrados)
 	// ===========================================================================
@@ -198,6 +222,7 @@ type Querier interface {
 	SoftDeleteProducto(ctx context.Context, id int64) error
 	SoftDeleteUsuario(ctx context.Context, id int64) error
 	SoftDeleteVarianteEnvase(ctx context.Context, id int64) error
+	UpdateConteoItemFisico(ctx context.Context, arg UpdateConteoItemFisicoParams) (UpdateConteoItemFisicoRow, error)
 	UpdateCuadreCerrar(ctx context.Context, arg UpdateCuadreCerrarParams) (CuadresCaja, error)
 	UpdateFragancia(ctx context.Context, arg UpdateFraganciaParams) (Fragancia, error)
 	UpdateLastLogin(ctx context.Context, id int64) error
